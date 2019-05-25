@@ -1,14 +1,27 @@
-﻿using Improbable.Team;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
+﻿using Improbable.Gdk.GameObjectRepresentation;
+using Improbable.Team;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Team
 {
-    [WorkerType(WorkerPlatform.UnityWorker)]
     public class TeamAssignmentVisualizerUnityWorker : MonoBehaviour
     {
-        [Require] private TeamAssignment.Reader teamAssignmentReader;
-        public uint TeamId { get { return teamAssignmentReader.Data.teamId; } }
+        [Require] private TeamAssignment.Requirable.Reader teamAssignmentReader;
+        public uint TeamId
+        {
+            get
+            {
+                if (teamAssignmentReader == null) return uint.MaxValue;
+                return teamAssignmentReader.Data.TeamId;
+            }
+        }
+
+        private void OnEnable()
+        {
+        }
+
+        private void OnDisable()
+        {
+        }
     }
 }

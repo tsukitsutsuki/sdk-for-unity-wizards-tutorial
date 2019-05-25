@@ -3,9 +3,8 @@ using Assets.Gamelogic.Core;
 using Assets.Gamelogic.Fire;
 using Improbable.Building;
 using Improbable.Fire;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Life;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Building
@@ -13,11 +12,12 @@ namespace Assets.Gamelogic.Building
     [WorkerType(WorkerPlatform.UnityWorker)]
     public class BarracksBehaviour : MonoBehaviour, IFlammable
     {
-        [Require] private BarracksInfo.Writer barracksInfo;
-        [Require] private StockpileDepository.Writer stockpileDepository;
-        [Require] private Health.Writer health;
-        [Require] private Flammable.Writer flammable;
-        [Require] private NPCSpawner.Writer npcSpawner;
+        [Require] private BarracksInfo.Requirable.Writer barracksInfo;
+        [Require] private StockpileDepository.Requirable.Writer stockpileDepository;
+        [Require] private Health.Requirable.Writer health;
+        [Require] private Flammable.Requirable.Writer flammable;
+        [Require] private Flammable.Requirable.CommandRequestSender flammableRequestSender;
+        [Require] private NPCSpawner.Requirable.Writer npcSpawner;
         
         [SerializeField] private FlammableBehaviour flammableBehaviour;
         [SerializeField] private NPCSpawnerBehaviour npcSpawnerBehaviour;
@@ -32,8 +32,8 @@ namespace Assets.Gamelogic.Building
 
         private void OnEnable()
         {
-            barracksStateMachine = new BarracksStateMachine(barracksInfo, stockpileDepository, health, flammableBehaviour, npcSpawnerBehaviour);
-            barracksStateMachine.OnEnable(barracksInfo.Data.barracksState);
+            barracksStateMachine = new BarracksStateMachine(barracksInfo, stockpileDepository, health, flammableBehaviour, flammableRequestSender, npcSpawnerBehaviour);
+            barracksStateMachine.OnEnable(barracksInfo.Data.BarracksState);
         }
 
         private void OnDisable()

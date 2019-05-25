@@ -1,12 +1,24 @@
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Tree;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Tree
 {
     public class TreeStateVisualizer : MonoBehaviour
     {
-        [Require] private TreeState.Reader treeState;
-        public TreeState.Reader CurrentState { get { return treeState; } }
+        [Require] private TreeState.Requirable.Reader treeState;
+        public TreeState.Requirable.Reader CurrentState { get { return treeState; } }
+
+        private void Awake()
+        {
+        }
+
+        private void OnEnable()
+        {
+        }
+
+        private void OnDisable()
+        {
+        }
     }
 }

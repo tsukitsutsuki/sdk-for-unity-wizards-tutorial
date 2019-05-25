@@ -1,16 +1,15 @@
+using System;
+using UnityEngine;
 using Assets.Gamelogic.Building;
 using Assets.Gamelogic.Fire;
 using Assets.Gamelogic.Life;
 using Assets.Gamelogic.Team;
 using Assets.Gamelogic.Tree;
 using Assets.Gamelogic.Utils;
-using Improbable;
 using Improbable.Building;
 using Improbable.Tree;
-using Improbable.Unity.Core;
-using System;
-using Improbable.Unity.Entity;
-using UnityEngine;
+using Improbable.Gdk.GameObjectRepresentation;
+using Improbable.Gdk.Core;
 
 namespace Assets.Gamelogic.NPC
 {
@@ -18,18 +17,25 @@ namespace Assets.Gamelogic.NPC
     {
         private static Collider[] nearbyColliders = new Collider[32];
 
-        public static bool TargetExistsLocally(EntityId targetEntityId)
+        public static GameObject GetTargetGameObject(GameObject gameObject, EntityId targetEntityId)
         {
-            return LocalEntities.Instance.ContainsEntity(targetEntityId);
-        }
-
-        public static GameObject GetTargetGameObject(EntityId targetEntityId)
-        {
-            if (!TargetExistsLocally(targetEntityId))
+            var spatialOSComponent = gameObject.GetComponent<SpatialOSComponent>();
+            if (spatialOSComponent == null)
             {
                 return null;
             }
-            return LocalEntities.Instance.Get(targetEntityId).UnderlyingGameObject;
+
+            if (!spatialOSComponent.IsEntityOnThisWorker(targetEntityId))
+            {
+                return null;
+            }
+
+            GameObject linkedGameObject;
+            if (!spatialOSComponent.TryGetGameObjectForSpatialOSEntityId(targetEntityId, out linkedGameObject))
+            {
+                return null;
+            }
+            return linkedGameObject;
         }
 
         public static bool IsWithinInteractionRange(Vector3 currentPosition, Vector3 targetPosition, float interactionSqrDistance)
@@ -47,17 +53,17 @@ namespace Assets.Gamelogic.NPC
 
             for (var nearbyColliderIndex = 0; nearbyColliderIndex < gameObjectCount; nearbyColliderIndex++)
             {
-                var targetObject = nearbyColliders[nearbyColliderIndex].gameObject;
-                if (!targetObject.IsSpatialOsEntity())
+                var targetObject = nearbyColliders[nearbyColliderIndex].gameObject.GetComponent<SpatialOSComponent>();
+                if (targetObject == null)
                 {
                     continue;
                 }
 
                 var distance = (targetObject.transform.position - currentPosition).sqrMagnitude;
-                if (distance < minimumDistanceFound && conditionForSuccess(referenceGameObject, targetObject))
+                if (distance < minimumDistanceFound && conditionForSuccess(referenceGameObject, targetObject.gameObject))
                 {
                     minimumDistanceFound = distance;
-                    closestTarget = targetObject;
+                    closestTarget = targetObject.gameObject;
                 }
             }
             return closestTarget;
@@ -127,7 +133,7 @@ namespace Assets.Gamelogic.NPC
             return targetTreeStateVisualizer != null && 
                    targetHealthVisualizer != null &&
                    targetTreeStateVisualizer.CurrentState != null &&
-                   targetTreeStateVisualizer.CurrentState.Data.currentState == TreeFSMState.HEALTHY &&
+                   targetTreeStateVisualizer.CurrentState.Data.CurrentState == TreeFSMState.HEALTHY &&
                    targetHealthVisualizer.CurrentHealth > 0;
         }
 

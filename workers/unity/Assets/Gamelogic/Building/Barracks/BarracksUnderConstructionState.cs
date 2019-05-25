@@ -7,15 +7,17 @@ namespace Assets.Gamelogic.Building.Barracks
 {
     public class BarracksUnderConstructionState : FsmBaseState<BarracksStateMachine, BarracksState>
     {
-        private readonly Health.Reader health;
+        private readonly Health.Requirable.Reader health;
         private readonly NPCSpawnerBehaviour npcSpawnerBehaviour;
+        private bool isEnter = false;
 
         public BarracksUnderConstructionState(BarracksStateMachine owner, 
-                                              Health.Reader inHealth, 
+                                              Health.Requirable.Reader inHealth, 
                                               NPCSpawnerBehaviour inNPCSpawnerBehaviour) : base(owner)
         {
             health = inHealth;
             npcSpawnerBehaviour = inNPCSpawnerBehaviour;
+            health.ComponentUpdated += OnHealthUpdated;
         }
 
         public override void Enter()
@@ -23,7 +25,7 @@ namespace Assets.Gamelogic.Building.Barracks
             Owner.SetCanAcceptResources(true);
             npcSpawnerBehaviour.SetSpawningEnabled(false);
 
-            health.ComponentUpdated.Add(OnHealthUpdated);
+            isEnter = true;
         }
 
         public override void Tick()
@@ -32,12 +34,12 @@ namespace Assets.Gamelogic.Building.Barracks
 
         public override void Exit(bool disabled)
         {
-            health.ComponentUpdated.Remove(OnHealthUpdated);
+            isEnter = false;
         }
 
         private void OnHealthUpdated(Health.Update update)
         {
-            if (update.currentHealth.HasValue)
+            if (isEnter && update.CurrentHealth.HasValue)
             {
                 Owner.EvaluateAndSetFlammability(update);
                 EvaluateAndTransitionToConstructionFinishedState(update);
@@ -46,7 +48,7 @@ namespace Assets.Gamelogic.Building.Barracks
 
         private void EvaluateAndTransitionToConstructionFinishedState(Health.Update update)
         {
-            if (update.currentHealth.Value == SimulationSettings.BarracksMaxHealth)
+            if (update.CurrentHealth.Value == SimulationSettings.BarracksMaxHealth)
             {
                 Owner.TriggerTransition(BarracksState.CONSTRUCTION_FINISHED);
             }

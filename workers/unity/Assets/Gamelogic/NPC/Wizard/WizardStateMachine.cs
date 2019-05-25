@@ -1,24 +1,25 @@
 using Assets.Gamelogic.Abilities;
 using Assets.Gamelogic.FSM;
 using Assets.Gamelogic.Team;
+using Assets.Gamelogic.Utils;
+using System.Collections.Generic;
+using UnityEngine;
 using Improbable;
 using Improbable.Npc;
-using System.Collections.Generic;
-using Assets.Gamelogic.Utils;
-using UnityEngine;
+using Improbable.Gdk.Core;
 
 namespace Assets.Gamelogic.NPC.Wizard
 {
     public class WizardStateMachine : FiniteStateMachine<WizardFSMState.StateEnum>
     {
-        private readonly NPCWizard.Writer npcWizard;
+        private readonly NPCWizard.Requirable.Writer npcWizard;
         public NPCWizardData Data;
 
         public WizardStateMachine(WizardBehaviour behaviour,
-                                  NPCWizard.Writer inNpcWizard,
+                                  NPCWizard.Requirable.Writer inNpcWizard,
                                   TargetNavigationBehaviour navigation,
                                   TeamAssignmentVisualizerUnityWorker teamAssignment,
-                                  TargetNavigation.Writer targetNavigation,
+                                  TargetNavigation.Requirable.Writer targetNavigation,
                                   SpellsBehaviour spellsBehaviour,
                                   IList<Coordinates> cachedTeamHqCoordinates)
         {
@@ -90,27 +91,27 @@ namespace Assets.Gamelogic.NPC.Wizard
 
             if (IsValidTransition(newState))
             {
-                Data.currentState = newState;
-                Data.targetEntityId = targetEntityId;
-                Data.targetPosition = targetPosition.FlattenVector().ToVector3f();
+                Data.CurrentState = newState;
+                Data.TargetEntityId = targetEntityId;
+                Data.TargetPosition = targetPosition.FlattenVector().ToVector3f();
 
                 var update = new NPCWizard.Update();
-                update.SetCurrentState(Data.currentState);
-                update.SetTargetEntityId(Data.targetEntityId);
-                update.SetTargetPosition(Data.targetPosition);
+                update.CurrentState = Data.CurrentState;
+                update.TargetEntityId = Data.TargetEntityId;
+                update.TargetPosition = Data.TargetPosition;
                 npcWizard.Send(update);
 
                 TransitionTo(newState);
             }
             else
             {
-                Debug.LogErrorFormat("NPCWizard: Invalid transition from {0} to {1} detected.", Data.currentState, newState);
+                Debug.LogErrorFormat("NPCWizard: Invalid transition from {0} to {1} detected.", Data.CurrentState, newState);
             }
         }
 
         protected override void OnEnableImpl()
         {
-            Data = npcWizard.Data.DeepCopy();
+            Data = new NPCWizardData(npcWizard.Data.CurrentState, npcWizard.Data.TargetEntityId, npcWizard.Data.TargetPosition);
         }
     }
 }

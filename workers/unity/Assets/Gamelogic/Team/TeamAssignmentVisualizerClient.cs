@@ -1,7 +1,6 @@
 ﻿using Assets.Gamelogic.Core;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Team;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Team
@@ -9,9 +8,9 @@ namespace Assets.Gamelogic.Team
     [WorkerType(WorkerPlatform.UnityClient)]
     public class TeamAssignmentVisualizerClient : MonoBehaviour
     {
-        [Require] private TeamAssignment.Reader teamAssignment;
+        [Require] private TeamAssignment.Requirable.Reader teamAssignment;
 
-        public uint TeamId { get { return teamAssignment.Data.teamId; } }
+        public uint TeamId { get { return teamAssignment.Data.TeamId; } }
 
         [SerializeField] private Material RedMaterial;
         [SerializeField] private Material BlueMaterial;
@@ -19,18 +18,17 @@ namespace Assets.Gamelogic.Team
 
         private void OnEnable()
         {
-            teamAssignment.ComponentUpdated.Add(TeamAssigned);
-            SetTeamColour(teamAssignment.Data.teamId);
+            teamAssignment.ComponentUpdated += TeamAssigned;
+            SetTeamColour(teamAssignment.Data.TeamId);
         }
 
         private void OnDisable()
         {
-            teamAssignment.ComponentUpdated.Remove(TeamAssigned);
         }
 
         private void TeamAssigned(TeamAssignment.Update teamAssigned)
         {
-            SetTeamColour(teamAssigned.teamId.Value);
+            SetTeamColour(teamAssigned.TeamId.Value);
         }
 
         private void SetTeamColour(uint teamIdValue)

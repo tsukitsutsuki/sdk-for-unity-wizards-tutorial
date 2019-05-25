@@ -4,28 +4,33 @@ using System.Collections.Generic;
 using Assets.Gamelogic.Fire;
 using Improbable.Life;
 using UnityEngine;
+using Improbable.Gdk.Core;
+using Improbable.Fire;
 
 namespace Assets.Gamelogic.Building.Barracks
 {
     public class BarracksStateMachine : FiniteStateMachine<BarracksState>
     {
-        private readonly BarracksInfo.Writer barracksInfo;
-        public BarracksInfoData Data; 
+        private readonly BarracksInfo.Requirable.Writer barracksInfo;
+        public BarracksState BarracksState; 
 
-        private readonly StockpileDepository.Writer stockpile;
-        private readonly Health.Writer health;
+        private readonly StockpileDepository.Requirable.Writer stockpile;
+        private readonly Health.Requirable.Writer health;
         private readonly FlammableBehaviour flammableBehaviour;
+        private readonly Flammable.Requirable.CommandRequestSender flammableRequestSender;
 
-        public BarracksStateMachine(BarracksInfo.Writer inBarracksInfo,
-                                    StockpileDepository.Writer inStockpile,
-                                    Health.Writer inHealth, 
-                                    FlammableBehaviour inFlammableBehaviour, 
+        public BarracksStateMachine(BarracksInfo.Requirable.Writer inBarracksInfo,
+                                    StockpileDepository.Requirable.Writer inStockpile,
+                                    Health.Requirable.Writer inHealth, 
+                                    FlammableBehaviour inFlammableBehaviour,
+                                    Flammable.Requirable.CommandRequestSender inFlammableRequestSender,
                                     NPCSpawnerBehaviour npcSpawnerBehaviour)
         {
             barracksInfo = inBarracksInfo;
             stockpile = inStockpile;
             health = inHealth;
             flammableBehaviour = inFlammableBehaviour;
+            flammableRequestSender = inFlammableRequestSender;
 
             var stateList = new Dictionary<BarracksState, IFsmState>
             {
@@ -52,28 +57,28 @@ namespace Assets.Gamelogic.Building.Barracks
 
             if (IsValidTransition(newState))
             {
-                Data.barracksState = newState;
+                BarracksState = newState;
 
                 var update = new BarracksInfo.Update();
-                update.SetBarracksState(Data.barracksState);
+                update.BarracksState = BarracksState;
                 barracksInfo.Send(update);
 
                 TransitionTo(newState);
             }
             else
             {
-                Debug.LogErrorFormat("Barracks: Invalid transition from {0} to {1} detected.", Data.barracksState, newState);
+                Debug.LogErrorFormat("Barracks: Invalid transition from {0} to {1} detected.", BarracksState, newState);
             }
         }
 
         protected override void OnEnableImpl()
         {
-            Data = barracksInfo.Data.DeepCopy();
+            BarracksState = barracksInfo.Data.BarracksState;
         }
 
         public bool EvaluateCanAcceptResources()
         {
-            return CurrentState == BarracksState.UNDER_CONSTRUCTION && health.Data.canBeChanged && health.Data.currentHealth < health.Data.maxHealth;
+            return CurrentState == BarracksState.UNDER_CONSTRUCTION && health.Data.CanBeChanged && health.Data.CurrentHealth < health.Data.MaxHealth;
         }
 
         public void SetCanAcceptResources(bool canAcceptResources)
@@ -83,9 +88,9 @@ namespace Assets.Gamelogic.Building.Barracks
                 Debug.LogError("stockpile is null in BarracksStateMachine.");
                 return;
             }
-            if (stockpile.Data.canAcceptResources != canAcceptResources)
+            if (stockpile.Data.CanAcceptResources != canAcceptResources)
             {
-                stockpile.Send(new StockpileDepository.Update().SetCanAcceptResources(canAcceptResources));
+                stockpile.Send(new StockpileDepository.Update() { CanAcceptResources = new Option<BlittableBool>(canAcceptResources) });
             }
         }
 
@@ -103,14 +108,14 @@ namespace Assets.Gamelogic.Building.Barracks
                 return;
             }
 
-            if (update.currentHealth.Value <= 0)
+            if (update.CurrentHealth.Value <= 0)
             {
-                flammableBehaviour.SelfExtinguish(health, false);
+                flammableBehaviour.SelfExtinguish(flammableRequestSender, false);
             }
             else
             {
-                var canBeIgnited = update.currentHealth.Value > 0;
-                flammableBehaviour.SelfSetCanBeIgnited(barracksInfo, canBeIgnited);
+                var canBeIgnited = update.CurrentHealth.Value > 0;
+                flammableBehaviour.SelfSetCanBeIgnited(flammableRequestSender, canBeIgnited);
             }
         }
     }

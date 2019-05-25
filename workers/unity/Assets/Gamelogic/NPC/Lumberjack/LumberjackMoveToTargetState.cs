@@ -2,7 +2,7 @@ using Assets.Gamelogic.Core;
 using Assets.Gamelogic.FSM;
 using Assets.Gamelogic.NPC.LumberJack;
 using Assets.Gamelogic.Utils;
-using Improbable;
+using Improbable.Gdk.Core;
 using Improbable.Npc;
 using UnityEngine;
 
@@ -10,26 +10,29 @@ namespace Assets.Gamelogic.NPC.Lumberjack
 {
     public class LumberjackMoveToTargetState : FsmBaseState<LumberjackStateMachine, LumberjackFSMState.StateEnum>
     {
-        private readonly TargetNavigation.Writer targetNavigation;
+        private readonly TargetNavigation.Requirable.Writer targetNavigation;
         private readonly LumberjackBehaviour parentBehaviour;
         private readonly TargetNavigationBehaviour navigation;
         
         private Coroutine interactionWithTargetDelayCoroutine;
+        private bool isEnter = false;
 
         public LumberjackMoveToTargetState(LumberjackStateMachine owner,
                                            LumberjackBehaviour inParentBehaviour,
-                                           TargetNavigation.Writer inTargetNavigation,
+                                           TargetNavigation.Requirable.Writer inTargetNavigation,
                                            TargetNavigationBehaviour inNavigation)
             : base(owner)
         {
             targetNavigation = inTargetNavigation;
             parentBehaviour = inParentBehaviour;
             navigation = inNavigation;
+
+            targetNavigation.OnNavigationFinished += OnTargetNavigationUpdated;
         }
 
         public override void Enter()
         {
-            targetNavigation.ComponentUpdated.Add(OnTargetNavigationUpdated);
+            isEnter = true;
             StartMovingTowardsTarget();
         }
 
@@ -39,8 +42,8 @@ namespace Assets.Gamelogic.NPC.Lumberjack
 
         public override void Exit(bool disabled)
         {
-            targetNavigation.ComponentUpdated.Remove(OnTargetNavigationUpdated);
             StopInteractionWithTargetDelayCoroutine();
+            isEnter = false;
         }
 
         private void StopInteractionWithTargetDelayCoroutine()
@@ -66,7 +69,7 @@ namespace Assets.Gamelogic.NPC.Lumberjack
 
         private void StartMovingTowardsTargetEntity()
         {
-            var targetGameObject = NPCUtils.GetTargetGameObject(Owner.Data.targetEntityId);
+            var targetGameObject = NPCUtils.GetTargetGameObject(parentBehaviour.gameObject, Owner.Data.TargetEntityId);
             if (targetGameObject == null)
             {
                 Owner.TriggerTransition(LumberjackFSMState.StateEnum.IDLE, new EntityId(), SimulationSettings.InvalidPosition);
@@ -77,7 +80,7 @@ namespace Assets.Gamelogic.NPC.Lumberjack
                 InitiateInteractionWithTarget();
                 return;
             }
-            navigation.StartNavigation(Owner.Data.targetEntityId, SimulationSettings.NPCDefaultInteractionSqrDistance);
+            navigation.StartNavigation(Owner.Data.TargetEntityId, SimulationSettings.NPCDefaultInteractionSqrDistance);
         }
 
         private void InitiateInteractionWithTarget()
@@ -88,7 +91,7 @@ namespace Assets.Gamelogic.NPC.Lumberjack
 
         private void StartMovingTowardsTargetPosition()
         {
-            var targetPosition = Owner.Data.targetPosition.ToVector3();
+            var targetPosition = Owner.Data.TargetPosition.ToVector3();
             if (MathUtils.CompareEqualityEpsilon(targetPosition, SimulationSettings.InvalidPosition))
             {
                 Owner.TriggerTransition(LumberjackFSMState.StateEnum.IDLE, new EntityId(), SimulationSettings.InvalidPosition);
@@ -102,32 +105,31 @@ namespace Assets.Gamelogic.NPC.Lumberjack
             navigation.StartNavigation(targetPosition, SimulationSettings.NPCDefaultInteractionSqrDistance);
         }
 
-        private void OnTargetNavigationUpdated(TargetNavigation.Update update)
+        private void OnTargetNavigationUpdated(NavigationFinished update)
         {
-            if (update.navigationFinished.Count > 0)
+            if (!isEnter) return;
+
+            var success = update.Success;
+            if (success)
             {
-                var success = update.navigationFinished[update.navigationFinished.Count - 1].success;
-                if (success)
+                if (TargetIsEntity())
                 {
-                    if (TargetIsEntity())
-                    {
-                        InitiateInteractionWithTarget();
-                    }
-                    else
-                    {
-                        Owner.TriggerTransition(LumberjackFSMState.StateEnum.IDLE, new EntityId(), SimulationSettings.InvalidPosition);
-                    }
+                    InitiateInteractionWithTarget();
                 }
                 else
                 {
                     Owner.TriggerTransition(LumberjackFSMState.StateEnum.IDLE, new EntityId(), SimulationSettings.InvalidPosition);
                 }
             }
+            else
+            {
+                Owner.TriggerTransition(LumberjackFSMState.StateEnum.IDLE, new EntityId(), SimulationSettings.InvalidPosition);
+            }
         }
 
         private void AttemptInteractionWithTarget()
         {
-            var targetGameObject = NPCUtils.GetTargetGameObject(Owner.Data.targetEntityId);
+            var targetGameObject = NPCUtils.GetTargetGameObject(parentBehaviour.gameObject, Owner.Data.TargetEntityId);
             if (targetGameObject == null)
             {
                 Owner.TriggerTransition(LumberjackFSMState.StateEnum.IDLE, new EntityId(), SimulationSettings.InvalidPosition);
@@ -136,13 +138,13 @@ namespace Assets.Gamelogic.NPC.Lumberjack
             if (NPCUtils.IsTargetAHealthyTree(parentBehaviour.gameObject, targetGameObject) &&
                 NPCUtils.IsWithinInteractionRange(parentBehaviour.transform.position, targetGameObject.transform.position, SimulationSettings.NPCDefaultInteractionSqrDistance))
             {
-                Owner.TriggerTransition(LumberjackFSMState.StateEnum.HARVESTING, Owner.Data.targetEntityId, SimulationSettings.InvalidPosition);
+                Owner.TriggerTransition(LumberjackFSMState.StateEnum.HARVESTING, Owner.Data.TargetEntityId, SimulationSettings.InvalidPosition);
                 return;
             }
             if (NPCUtils.IsTargetATeamStockpile(parentBehaviour.gameObject, targetGameObject) &&
                 NPCUtils.IsWithinInteractionRange(parentBehaviour.transform.position, targetGameObject.transform.position, SimulationSettings.NPCDefaultInteractionSqrDistance))
             {
-                Owner.TriggerTransition(LumberjackFSMState.StateEnum.STOCKPILING, Owner.Data.targetEntityId, SimulationSettings.InvalidPosition);
+                Owner.TriggerTransition(LumberjackFSMState.StateEnum.STOCKPILING, Owner.Data.TargetEntityId, SimulationSettings.InvalidPosition);
                 return;
             }
             Owner.TriggerTransition(LumberjackFSMState.StateEnum.IDLE, new EntityId(), SimulationSettings.InvalidPosition);
@@ -150,7 +152,7 @@ namespace Assets.Gamelogic.NPC.Lumberjack
 
         private bool TargetIsEntity()
         {
-            return Owner.Data.targetEntityId.IsValid();
+            return Owner.Data.TargetEntityId.IsValid();
         }
     }
 }

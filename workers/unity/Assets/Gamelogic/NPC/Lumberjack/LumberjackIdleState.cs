@@ -3,8 +3,9 @@ using Assets.Gamelogic.Core;
 using Assets.Gamelogic.FSM;
 using Assets.Gamelogic.NPC.Lumberjack;
 using Assets.Gamelogic.Utils;
-using Improbable;
 using Improbable.Core;
+using Improbable.Gdk.Core;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Npc;
 using Improbable.Team;
 using UnityEngine;
@@ -13,14 +14,14 @@ namespace Assets.Gamelogic.NPC.LumberJack
 {
     public class LumberjackIdleState : FsmBaseState<LumberjackStateMachine, LumberjackFSMState.StateEnum>
     {
-        private readonly TeamAssignment.Reader teamAssignment;
-        private readonly Inventory.Reader inventory;
+        private readonly TeamAssignment.Requirable.Reader teamAssignment;
+        private readonly Inventory.Requirable.Reader inventory;
         private readonly LumberjackBehaviour parentBehaviour;
         
         public LumberjackIdleState(LumberjackStateMachine owner,
                                    LumberjackBehaviour inParentBehaviour,
-                                   TeamAssignment.Reader inTeamAssignment,
-                                   Inventory.Reader inInventory)
+                                   TeamAssignment.Requirable.Reader inTeamAssignment,
+                                   Inventory.Requirable.Reader inInventory)
             : base(owner)
         {
             parentBehaviour = inParentBehaviour;
@@ -62,12 +63,12 @@ namespace Assets.Gamelogic.NPC.LumberJack
                     return;
                 }
             }
-            MoveToEntity(targetEntity.EntityId());
+            MoveToEntity(targetEntity.GetComponent<SpatialOSComponent>().SpatialEntityId);
         }
 
         private void MoveCloserToHQ()
         {
-            var hqPosition = SimulationSettings.TeamHQLocations[(int)teamAssignment.Data.teamId].ToVector3();
+            var hqPosition = SimulationSettings.TeamHQLocations[(int)teamAssignment.Data.TeamId].ToVector3();
             var offset = Random.insideUnitSphere * SimulationSettings.NPCWanderWaypointDistance;
             MoveToPosition(hqPosition + offset);
         }

@@ -2,8 +2,8 @@ using Assets.Gamelogic.Abilities;
 using Assets.Gamelogic.Core;
 using Assets.Gamelogic.FSM;
 using Assets.Gamelogic.Utils;
-using Improbable;
 using Improbable.Abilities;
+using Improbable.Gdk.Core;
 using Improbable.Npc;
 using UnityEngine;
 
@@ -50,7 +50,7 @@ namespace Assets.Gamelogic.NPC.Wizard
 
         private void CastLightningOnTarget()
         {
-            var targetGameObject = NPCUtils.GetTargetGameObject(Owner.Data.targetEntityId);
+            var targetGameObject = NPCUtils.GetTargetGameObject(parentBehaviour.gameObject, Owner.Data.TargetEntityId);
             if (targetGameObject == null)
             {
                 Owner.TriggerTransition(WizardFSMState.StateEnum.IDLE, new EntityId(), SimulationSettings.InvalidPosition);

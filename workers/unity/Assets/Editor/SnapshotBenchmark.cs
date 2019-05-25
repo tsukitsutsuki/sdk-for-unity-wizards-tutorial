@@ -5,7 +5,7 @@ namespace Assets.Editor
 {
     public static class SnapshotBenchmark
     {
-        public static void Build(SnapshotBuilder snapshot)
+        public static void Build(Improbable.Gdk.Core.Snapshot snapshot)
         {
             var texture = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Editor/Resources/full.png");
             

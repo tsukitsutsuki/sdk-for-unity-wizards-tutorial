@@ -1,8 +1,7 @@
 using Assets.Gamelogic.Utils;
 using Improbable.Core;
 using Improbable.Fire;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
+using Improbable.Gdk.GameObjectRepresentation;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Core
@@ -10,9 +9,9 @@ namespace Assets.Gamelogic.Core
     [WorkerType(WorkerPlatform.UnityClient)]
     public class TransformReceiverClientControllableAuthoritative : MonoBehaviour
     {
-        [Require] private ClientAuthorityCheck.Writer clientAuthorityCheck;
-        [Require] private TransformComponent.Reader transformComponent;
-        [Require] private Flammable.Reader flammable;
+        [Require] private ClientAuthorityCheck.Requirable.Writer clientAuthorityCheck;
+        [Require] private TransformComponent.Requirable.Reader transformComponent;
+        [Require] private Flammable.Requirable.Reader flammable;
 
         private Vector3 targetVelocity;
 
@@ -25,20 +24,16 @@ namespace Assets.Gamelogic.Core
 
         private void OnEnable()
         {
-            transformComponent.ComponentUpdated.Add(OnTransformComponentUpdated);
+            transformComponent.OnTeleportEvent += OnTransformComponentUpdated;
         }
 
         private void OnDisable()
         {
-            transformComponent.ComponentUpdated.Remove(OnTransformComponentUpdated);
         }
 
-        private void OnTransformComponentUpdated(TransformComponent.Update update)
+        private void OnTransformComponentUpdated(TeleportEvent update)
         {
-            for (int i = 0; i < update.teleportEvent.Count; i++)
-            {
-                TeleportTo(update.teleportEvent[i].targetPosition.ToVector3());
-            }
+            TeleportTo(update.TargetPosition.ToVector3());
         }
 
         private void TeleportTo(Vector3 position)
@@ -49,7 +44,7 @@ namespace Assets.Gamelogic.Core
 
         public void SetTargetVelocity(Vector3 direction)
         {
-            bool isOnFire = flammable != null && flammable.Data.isOnFire;
+            bool isOnFire = flammable != null && flammable.Data.IsOnFire;
             var movementSpeed = SimulationSettings.PlayerMovementSpeed * (isOnFire ? SimulationSettings.OnFireMovementSpeedIncreaseFactor : 1f);
             targetVelocity = direction * movementSpeed;
         }

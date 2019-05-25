@@ -1,33 +1,39 @@
 using Assets.Gamelogic.FSM;
 using Assets.Gamelogic.NPC.Lumberjack;
 using Assets.Gamelogic.Utils;
-using Improbable;
+using System.Collections.Generic;
+using UnityEngine;
 using Improbable.Npc;
 using Improbable.Team;
-using System.Collections.Generic;
 using Improbable.Core;
-using UnityEngine;
+using Improbable.Tree;
+using Improbable.Building;
+using Improbable.Gdk.Core;
 
 namespace Assets.Gamelogic.NPC.LumberJack
 {
     public class LumberjackStateMachine : FiniteStateMachine<LumberjackFSMState.StateEnum>
     {
-        private readonly NPCLumberjack.Writer npcLumberjack;
+        private readonly NPCLumberjack.Requirable.Writer npcLumberjack;
         public NPCLumberjackData Data;
 
         public LumberjackStateMachine(LumberjackBehaviour behaviour,
                                       TargetNavigationBehaviour navigation,
-                                      Inventory.Writer inventory,
-                                      TargetNavigation.Writer targetNavigation,
-                                      NPCLumberjack.Writer inNpcLumberjack,
-                                      TeamAssignment.Reader teamAssignment)
+                                      Inventory.Requirable.Writer inventory,
+                                      TargetNavigation.Requirable.Writer targetNavigation,
+                                      NPCLumberjack.Requirable.Writer inNpcLumberjack,
+                                      Harvestable.Requirable.CommandRequestSender inHarvestableRequestSender,
+                                      Harvestable.Requirable.CommandResponseHandler inHarvestableResponseHandler,
+                                      StockpileDepository.Requirable.CommandRequestSender inStockpileDepositoryRequestSender,
+                                      StockpileDepository.Requirable.CommandResponseHandler inStockpileDepositoryResponseHandler,
+                                      TeamAssignment.Requirable.Reader teamAssignment)
         {
             npcLumberjack = inNpcLumberjack;
 
             var idleState = new LumberjackIdleState(this, behaviour, teamAssignment, inventory);
             var moveToTargetState = new LumberjackMoveToTargetState(this, behaviour, targetNavigation, navigation);
-            var harvestingState = new LumberjackHarvestingState(this, behaviour, inventory);
-            var stockPilingState = new LumberjackStockpilingState(this, behaviour, inventory);
+            var harvestingState = new LumberjackHarvestingState(this, behaviour, inventory, inHarvestableRequestSender, inHarvestableResponseHandler);
+            var stockPilingState = new LumberjackStockpilingState(this, behaviour, inventory, inStockpileDepositoryRequestSender, inStockpileDepositoryResponseHandler);
             var onFireState = new LumberjackOnFireState(this, navigation, targetNavigation);
 
             var stateList = new Dictionary<LumberjackFSMState.StateEnum, IFsmState>
@@ -88,27 +94,27 @@ namespace Assets.Gamelogic.NPC.LumberJack
 
             if (IsValidTransition(newState))
             {
-                Data.currentState = newState;
-                Data.targetEntityId = targetEntityId;
-                Data.targetPosition = targetPosition.FlattenVector().ToVector3f();
+                Data.CurrentState = newState;
+                Data.TargetEntityId = targetEntityId;
+                Data.TargetPosition = targetPosition.FlattenVector().ToVector3f();
 
                 var update = new NPCLumberjack.Update();
-                update.SetCurrentState(Data.currentState);
-                update.SetTargetEntityId(Data.targetEntityId);
-                update.SetTargetPosition(Data.targetPosition);
+                update.CurrentState = Data.CurrentState;
+                update.TargetEntityId = Data.TargetEntityId;
+                update.TargetPosition = Data.TargetPosition;
                 npcLumberjack.Send(update);
 
                 TransitionTo(newState);
             }
             else
             {
-                Debug.LogErrorFormat("NPCLumberjack: Invalid transition from {0} to {1} detected.", Data.currentState, newState);
+                Debug.LogErrorFormat("NPCLumberjack: Invalid transition from {0} to {1} detected.", Data.CurrentState, newState);
             }
         }
 
         protected override void OnEnableImpl()
         {
-            Data = npcLumberjack.Data.DeepCopy();
+            Data = new NPCLumberjackData(npcLumberjack.Data.CurrentState, npcLumberjack.Data.TargetEntityId, npcLumberjack.Data.TargetPosition);
         }
     }
 }

@@ -1,9 +1,8 @@
 using Assets.Gamelogic.Core;
 using Assets.Gamelogic.Utils;
 using Improbable.Core;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Player;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Player
@@ -11,19 +10,28 @@ namespace Assets.Gamelogic.Player
     [WorkerType(WorkerPlatform.UnityWorker)]
     public class PlayerControlsVisualizer : MonoBehaviour
     {
-        [Require] private UnityWorkerAuthorityCheck.Writer unityworkerAuthorityCheck;
-        [Require] private PlayerInfo.Reader playerInfo;
-        [Require] private PlayerControls.Reader playerControls;
+        [Require] private UnityWorkerAuthorityCheck.Requirable.Writer unityworkerAuthorityCheck;
+        [Require] private PlayerInfo.Requirable.Reader playerInfo;
+        [Require] private PlayerControls.Requirable.Reader playerControls;
 
-        public Vector3 TargetPosition { get { return playerControls.Data.targetPosition.ToVector3(); } }
+        public Vector3 TargetPosition { get { return playerControls.Data.TargetPosition.ToVector3(); } }
 
         [SerializeField] private Rigidbody myRigidbody;
         [SerializeField] private TransformSender transformSender;
+
+        private SpatialOSComponent spatialOSComponent;
+        private Vector3 origin;
 
         private void Awake()
         {
             transformSender = gameObject.GetComponentIfUnassigned(transformSender);
             myRigidbody = gameObject.GetComponentIfUnassigned(myRigidbody);
+        }
+
+        private void OnEnable()
+        {
+            spatialOSComponent = GetComponent<SpatialOSComponent>();
+            origin = spatialOSComponent.Worker.Origin;
         }
 
         private void FixedUpdate()
@@ -33,23 +41,24 @@ namespace Assets.Gamelogic.Player
         
         private void MovePlayer()
         {
-            if (ShouldMovePlayerUnityWorker(TargetPosition, myRigidbody.position))
+            var targetPositionWithOffset = TargetPosition + origin;
+            if (ShouldMovePlayerUnityWorker(targetPositionWithOffset, myRigidbody.position))
             {
-                if (PlayerMovementCheatSafeguardPassedUnityWorker(TargetPosition, myRigidbody.position))
+                if (PlayerMovementCheatSafeguardPassedUnityWorker(targetPositionWithOffset, myRigidbody.position))
                 {
-                    transform.LookAt(TargetPosition);
-                    myRigidbody.MovePosition(TargetPosition);
+                    transform.LookAt(targetPositionWithOffset);
+                    myRigidbody.MovePosition(targetPositionWithOffset);
                 }
                 else
                 {
-                    transformSender.TriggerTeleport(myRigidbody.position);
+                    transformSender.TriggerTeleport(myRigidbody.position - origin);
                 }
             }
         }
 
         private bool ShouldMovePlayerUnityWorker(Vector3 targetPosition, Vector3 currentPosition)
         {
-            return playerInfo.Data.isAlive && (targetPosition - currentPosition).FlattenVector().sqrMagnitude > SimulationSettings.PlayerPositionUpdateMinSqrDistance;
+            return playerInfo.Data.IsAlive && (targetPosition - currentPosition).FlattenVector().sqrMagnitude > SimulationSettings.PlayerPositionUpdateMinSqrDistance;
         }
 
         private bool PlayerMovementCheatSafeguardPassedUnityWorker(Vector3 targetPosition, Vector3 currentPosition)

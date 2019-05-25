@@ -6,9 +6,7 @@ using Assets.Gamelogic.UI;
 using Assets.Gamelogic.Utils;
 using Improbable.Abilities;
 using Improbable.Core;
-using Improbable.Unity;
-using Improbable.Unity.Core;
-using Improbable.Unity.Visualizer;
+using Improbable.Gdk.GameObjectRepresentation;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Abilities
@@ -16,9 +14,10 @@ namespace Assets.Gamelogic.Abilities
     [WorkerType(WorkerPlatform.UnityClient)]
     public class SpellsRequester : MonoBehaviour
     {
-        [Require] private ClientAuthorityCheck.Writer clientAuthorityCheck;
-        [Require] private Spells.Reader spells;
-        
+        [Require] private ClientAuthorityCheck.Requirable.Writer clientAuthorityCheck;
+        [Require] private Spells.Requirable.Reader spells;
+        [Require] private Spells.Requirable.CommandRequestSender spellsRequestSender;
+
         private GameObject spellAOEIndicatorInstance;
         public bool SpellCastingModeActive;
         private SpellType activeSpell;
@@ -26,6 +25,7 @@ namespace Assets.Gamelogic.Abilities
         private IDictionary<SpellType, float> spellCooldownsLocalCopy = new Dictionary<SpellType, float> { { SpellType.LIGHTNING, 0f }, { SpellType.RAIN, 0f } };
         private RaycastHit hit;
         private Ray ray;
+        private SpatialOSComponent spatialComponent;
 
         [SerializeField] private PlayerInputListener playerInputListener;
         [SerializeField] private PlayerAnimController playerAnimController;
@@ -40,6 +40,7 @@ namespace Assets.Gamelogic.Abilities
 
         private void OnEnable()
         {
+            spatialComponent = GetComponent<SpatialOSComponent>();
             CreateSpellAOEIndicatorInstance();
         }
 
@@ -91,7 +92,7 @@ namespace Assets.Gamelogic.Abilities
         private void CastSpell()
         {
             var spellCastRequest = new SpellCastRequest(activeSpell, spellTargetPosition.ToCoordinates());
-            SpatialOS.Commands.SendCommand(clientAuthorityCheck, Spells.Commands.SpellCastRequest.Descriptor, spellCastRequest, gameObject.EntityId());
+            spellsRequestSender.SendSpellCastRequestRequest(spatialComponent.SpatialEntityId, spellCastRequest);
             SetLocalSpellCooldown(activeSpell, SimulationSettings.SpellCooldown);
             DeactivateSpellCastingMode();
         }

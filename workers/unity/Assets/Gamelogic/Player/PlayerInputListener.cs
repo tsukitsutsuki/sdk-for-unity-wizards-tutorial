@@ -1,12 +1,10 @@
 using System.Collections;
 using Assets.Gamelogic.Abilities;
 using Assets.Gamelogic.Core;
-using Assets.Gamelogic.UI;
 using Improbable.Abilities;
 using Improbable.Core;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Player;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Player
@@ -14,8 +12,8 @@ namespace Assets.Gamelogic.Player
     [WorkerType(WorkerPlatform.UnityClient)]
     public class PlayerInputListener : MonoBehaviour
     {
-        [Require] private ClientAuthorityCheck.Writer clientAuthorityCheck;
-        [Require] private PlayerInfo.Reader playerInfo;
+        [Require] private ClientAuthorityCheck.Requirable.Writer clientAuthorityCheck;
+        [Require] private PlayerInfo.Requirable.Reader playerInfo;
 
         private bool controlsEnabled;
         private Vector3 inputDirection = Vector3.zero;
@@ -32,27 +30,25 @@ namespace Assets.Gamelogic.Player
         private void OnEnable()
         {
             EnableControls();
-            playerInfo.ComponentUpdated.Add(OnPlayerInfoUpdated);
+            playerInfo.ComponentUpdated += OnPlayerInfoUpdated;
         }
 
         private void OnDisable()
         {
             DisableControls();
-            playerInfo.ComponentUpdated.Remove(OnPlayerInfoUpdated);
         }
 
         private void OnPlayerInfoUpdated(PlayerInfo.Update update)
         {
-            if (update.isAlive.HasValue)
+            if (update.IsAlive.HasValue)
             {
-                switch (update.isAlive.Value)
+                if (update.IsAlive.Value == true)
                 {
-                    case true:
-                        EnableControls();
-                        break;
-                    case false:
-                        DisableControls();
-                        break;
+                    EnableControls();
+                }
+                else
+                {
+                    DisableControls();
                 }
             }
         }

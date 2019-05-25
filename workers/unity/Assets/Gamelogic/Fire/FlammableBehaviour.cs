@@ -1,26 +1,27 @@
 using Improbable.Core;
-using Improbable.Entity.Component;
 using Improbable.Fire;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
-using Improbable.Unity.Core;
 using Assets.Gamelogic.Core;
 using Assets.Gamelogic.Utils;
-using Improbable;
-using Improbable.Unity;
+using Improbable.Gdk.GameObjectRepresentation;
+using Improbable.Gdk.Core;
 
 namespace Assets.Gamelogic.Fire
 {
     [WorkerType(WorkerPlatform.UnityWorker)]
     public class FlammableBehaviour : MonoBehaviour
     {
-        [Require] private Flammable.Writer flammable;
+        [Require] private Flammable.Requirable.Writer flammable;
+        [Require] private Flammable.Requirable.CommandRequestSender flammableRequestSender;
+        [Require] private Flammable.Requirable.CommandRequestHandler flammableRequestHandler;
 
-        public bool IsOnFire { get { return flammable != null && flammable.Data.isOnFire; } }
+        public bool IsOnFire { get { return flammable != null && flammable.Data.IsOnFire; } }
         private Collider[] nearbyColliders = new Collider[8];
         private Coroutine spreadFireCoroutine;
 
         private IFlammable[] flammableInterfaces;
+
+        private SpatialOSComponent spatialComponent;
 
         private void Awake()
         {
@@ -29,11 +30,13 @@ namespace Assets.Gamelogic.Fire
 
         private void OnEnable()
         {
-            flammable.CommandReceiver.OnIgnite.RegisterResponse(OnIgnite);
-            flammable.CommandReceiver.OnExtinguish.RegisterResponse(OnExtinguish);
-            flammable.CommandReceiver.OnSetCanBeIgnited.RegisterResponse(OnSetCanBeIgnited);
+            spatialComponent = GetComponent<SpatialOSComponent>();
 
-            if (flammable.Data.isOnFire)
+            flammableRequestHandler.OnIgniteRequest += OnIgnite;
+            flammableRequestHandler.OnExtinguishRequest += OnExtinguish;
+            flammableRequestHandler.OnSetCanBeIgnitedRequest += OnSetCanBeIgnited;
+
+            if (flammable.Data.IsOnFire)
             {
                 StartSpreadingFire();
             }
@@ -41,34 +44,27 @@ namespace Assets.Gamelogic.Fire
 
         private void OnDisable()
         {
-            flammable.CommandReceiver.OnIgnite.DeregisterResponse();
-            flammable.CommandReceiver.OnExtinguish.DeregisterResponse();
-            flammable.CommandReceiver.OnSetCanBeIgnited.DeregisterResponse();
-
             StopSpreadingFire();
         }
 
-        private Nothing OnIgnite(Nothing request, ICommandCallerInfo callerinfo)
+        private void OnIgnite(Flammable.Ignite.RequestResponder request)
         {
             Ignite();
-            return new Nothing();
         }
 
-        private Nothing OnExtinguish(ExtinguishRequest request, ICommandCallerInfo callerinfo)
+        private void OnExtinguish(Flammable.Extinguish.RequestResponder request)
         {
-            Extinguish(request.canBeIgnited);
-            return new Nothing();
+            Extinguish(request.Request.Payload.CanBeIgnited);
         }
 
-        private Nothing OnSetCanBeIgnited(SetCanBeIgnitedRequest request, ICommandCallerInfo callerinfo)
+        private void OnSetCanBeIgnited(Flammable.SetCanBeIgnited.RequestResponder request)
         {
-            SetCanBeIgnited(request.canBeIgnited);
-            return new Nothing();
+            SetCanBeIgnited(request.Request.Payload.CanBeIgnited);
         }
 
         private void Ignite()
         {
-            if (!flammable.Data.isOnFire && flammable.Data.canBeIgnited)
+            if (!flammable.Data.IsOnFire && flammable.Data.CanBeIgnited)
             {
                 SendIgniteUpdate();
                 StartSpreadingFire();
@@ -81,7 +77,7 @@ namespace Assets.Gamelogic.Fire
 
         private void Extinguish(bool canBeIgnited)
         {
-            if (flammable.Data.isOnFire)
+            if (flammable.Data.IsOnFire)
             {
                 SendExtinguishUpdate(canBeIgnited);
                 StopSpreadingFire();
@@ -94,37 +90,37 @@ namespace Assets.Gamelogic.Fire
 
         private void SetCanBeIgnited(bool canBeIgnited)
         {
-            if (flammable.Data.canBeIgnited != canBeIgnited)
+            if (flammable.Data.CanBeIgnited != canBeIgnited)
             {
-                flammable.Send(new Flammable.Update().SetCanBeIgnited(canBeIgnited));
+                flammable.Send(new Flammable.Update() { CanBeIgnited = new Option<BlittableBool>(canBeIgnited) });
             }
         }
 
-        private void SelfIgnite(IComponentWriter writer)
+        private void SelfIgnite(Flammable.Requirable.CommandRequestSender sender)
         {
             if (flammable == null)
             {
-                SpatialOS.Commands.SendCommand(writer, Flammable.Commands.Ignite.Descriptor, new Nothing(), gameObject.EntityId());
+                sender.SendIgniteRequest(spatialComponent.SpatialEntityId, new Nothing());
                 return;
             }
             Ignite();
         }
 
-        public void SelfExtinguish(IComponentWriter writer, bool canBeIgnited)
+        public void SelfExtinguish(Flammable.Requirable.CommandRequestSender sender, bool canBeIgnited)
         {
             if (flammable == null)
             {
-                SpatialOS.Commands.SendCommand(writer, Flammable.Commands.Extinguish.Descriptor, new ExtinguishRequest(canBeIgnited), gameObject.EntityId());
+                sender.SendExtinguishRequest(spatialComponent.SpatialEntityId, new ExtinguishRequest(canBeIgnited));
                 return;
             }
             Extinguish(canBeIgnited);
         }
 
-        public void SelfSetCanBeIgnited(IComponentWriter writer, bool canBeIgnited)
+        public void SelfSetCanBeIgnited(Flammable.Requirable.CommandRequestSender sender, bool canBeIgnited)
         {
             if (flammable == null)
             {
-                SpatialOS.Commands.SendCommand(writer, Flammable.Commands.SetCanBeIgnited.Descriptor, new SetCanBeIgnitedRequest(canBeIgnited), gameObject.EntityId());
+                sender.SendSetCanBeIgnitedRequest(spatialComponent.SpatialEntityId, new SetCanBeIgnitedRequest(canBeIgnited));
                 return;
             }
             SetCanBeIgnited(canBeIgnited);
@@ -158,7 +154,7 @@ namespace Assets.Gamelogic.Fire
                 {
                     // Cache local ignitable value, to avoid duplicated ignitions within 1 frame on an UnityWorker
                     otherFlammable.SetLocalCanBeIgnited(false);
-                    otherFlammable.GetComponent<FlammableBehaviour>().SelfIgnite(flammable);
+                    otherFlammable.GetComponent<FlammableBehaviour>().SelfIgnite(flammableRequestSender);
                 }
             }
         }
@@ -166,14 +162,16 @@ namespace Assets.Gamelogic.Fire
         private void SendIgniteUpdate()
         {
             var update = new Flammable.Update();
-            update.SetIsOnFire(true).SetCanBeIgnited(false);
+            update.IsOnFire = new Option<BlittableBool>(true);
+            update.CanBeIgnited = new Option<BlittableBool>(false);
             flammable.Send(update);
         }
 
         private void SendExtinguishUpdate(bool canBeIgnited)
         {
             var update = new Flammable.Update();
-            update.SetIsOnFire(false).SetCanBeIgnited(canBeIgnited);
+            update.IsOnFire = new Option<BlittableBool>(false);
+            update.CanBeIgnited = new Option<BlittableBool>(canBeIgnited);
             flammable.Send(update);
         }
     }

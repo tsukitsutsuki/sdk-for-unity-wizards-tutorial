@@ -1,7 +1,6 @@
 using Assets.Gamelogic.Utils;
 using Improbable.Abilities;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
+using Improbable.Gdk.GameObjectRepresentation;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Abilities
@@ -9,24 +8,20 @@ namespace Assets.Gamelogic.Abilities
     [WorkerType(WorkerPlatform.UnityClient)]
     public class SpellsVisualizer : MonoBehaviour
     {
-        [Require] private Spells.Reader spells;
+        [Require] private Spells.Requirable.Reader spells;
 
         private void OnEnable()
         {
-            spells.ComponentUpdated.Add(OnComponentUpdated);
+            spells.OnSpellAnimationEvent += OnSpellAnimation;
         }
 
         private void OnDisable()
         {
-            spells.ComponentUpdated.Remove(OnComponentUpdated);
         }
 
-        private void OnComponentUpdated(Spells.Update update)
+        private void OnSpellAnimation(SpellAnimationEvent update)
         {
-            for (var i = 0; i < update.spellAnimationEvent.Count; i++)
-            {
-                SpellsVisualizerPool.ShowSpellEffect(update.spellAnimationEvent[i].position.ToVector3(), update.spellAnimationEvent[i].spellType);
-            }
+            SpellsVisualizerPool.ShowSpellEffect(update.Position.ToVector3(), update.SpellType);
         }
     }
 }

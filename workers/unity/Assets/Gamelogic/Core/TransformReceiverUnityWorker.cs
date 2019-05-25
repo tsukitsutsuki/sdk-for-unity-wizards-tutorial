@@ -1,10 +1,8 @@
-using System;
 using Assets.Gamelogic.Utils;
 using Improbable;
 using Improbable.Core;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
-using Improbable.Worker;
+using Improbable.Gdk.GameObjectRepresentation;
+using Improbable.Worker.CInterop;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Core
@@ -12,10 +10,13 @@ namespace Assets.Gamelogic.Core
     [WorkerType(WorkerPlatform.UnityWorker)]
     public class TransformReceiverUnityWorker : MonoBehaviour
     {
-        [Require] private Position.Reader positionComponent;
-        [Require] private TransformComponent.Reader rotationComponent;
+        [Require] private Position.Requirable.Reader positionComponent;
+        [Require] private TransformComponent.Requirable.Reader rotationComponent;
 
         [SerializeField] private Rigidbody myRigidbody;
+
+        private SpatialOSComponent spatialOSComponent;
+        private Vector3 origin;
 
         private void Awake()
         {
@@ -24,21 +25,25 @@ namespace Assets.Gamelogic.Core
 
         private void OnEnable()
         {
-            positionComponent.CoordsUpdated.AddAndInvoke(OnPositionUpdated);
-            rotationComponent.RotationUpdated.AddAndInvoke(OnRotationUpdated);
+            spatialOSComponent = GetComponent<SpatialOSComponent>();
+            origin = spatialOSComponent.Worker.Origin;
+
+            positionComponent.CoordsUpdated += OnPositionUpdated;
+            OnPositionUpdated(positionComponent.Data.Coords);
+
+            rotationComponent.RotationUpdated += OnRotationUpdated;
+            OnRotationUpdated(rotationComponent.Data.Rotation);
         }
 
         private void OnDisable()
         {
-            positionComponent.CoordsUpdated.Remove(OnPositionUpdated);
-            rotationComponent.RotationUpdated.Remove(OnRotationUpdated);
         }
 
         private void OnPositionUpdated(Coordinates coords)
         {
             if (positionComponent.Authority == Authority.NotAuthoritative)
             {
-                myRigidbody.MovePosition(coords.ToVector3());
+                myRigidbody.MovePosition(coords.ToVector3() - origin);
             }
         }
 

@@ -1,4 +1,5 @@
 using Improbable;
+using Improbable.Gdk.Core;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Core

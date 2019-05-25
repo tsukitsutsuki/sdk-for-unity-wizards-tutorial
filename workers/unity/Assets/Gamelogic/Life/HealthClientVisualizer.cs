@@ -1,8 +1,7 @@
 using Assets.Gamelogic.UI;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Life;
 using Improbable.Team;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Life
@@ -10,11 +9,11 @@ namespace Assets.Gamelogic.Life
     [WorkerType(WorkerPlatform.UnityClient)]
     public class HealthClientVisualizer : MonoBehaviour
     {
-        [Require] private Health.Reader health;
-        [Require] private TeamAssignment.Reader teamAssigment;
+        [Require] private Health.Requirable.Reader health;
+        [Require] private TeamAssignment.Requirable.Reader teamAssigment;
 
-        public int CurrentHealth { get { return health.Data.currentHealth; } }
-        public int MaxHealth { get { return health.Data.maxHealth; } }
+        public int CurrentHealth { get { return health.Data.CurrentHealth; } }
+        public int MaxHealth { get { return health.Data.MaxHealth; } }
         private GameObject entityInfoCanvasInstance;
         private EntityHealthPanelController entityHealthPanelController;
 
@@ -33,13 +32,12 @@ namespace Assets.Gamelogic.Life
         private void OnEnable()
         {
             UpdateEntityHealthPanel();
-            entityHealthPanelController.SetHealthColorFromTeam(teamAssigment.Data.teamId);
-            health.ComponentUpdated.Add(OnComponentUpdated);
+            entityHealthPanelController.SetHealthColorFromTeam(teamAssigment.Data.TeamId);
+            health.ComponentUpdated += OnComponentUpdated;
         }
 
         private void OnDisable()
         {
-            health.ComponentUpdated.Remove(OnComponentUpdated);
         }
 
         private void OnComponentUpdated(Health.Update update)

@@ -1,6 +1,5 @@
-﻿using Improbable.Unity;
-using Improbable.Unity.Visualizer;
-using UnityEngine;
+﻿using UnityEngine;
+using Improbable.Gdk.GameObjectRepresentation;
 
 namespace Assets.Gamelogic.Core
 {

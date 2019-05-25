@@ -1,7 +1,6 @@
 using Assets.Gamelogic.UI;
 using Improbable.Fire;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
+using Improbable.Gdk.GameObjectRepresentation;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Fire
@@ -9,14 +8,14 @@ namespace Assets.Gamelogic.Fire
     [WorkerType(WorkerPlatform.UnityClient)]
     public class FlammableVisualizer : MonoBehaviour
     {
-        [Require] private Flammable.Reader flammable;
+        [Require] private Flammable.Requirable.Reader flammable;
 
         private GameObject fireEffectInstance;
         private ParticleSystem fireEffectparticleSystem;
 
         private void CreateFireEffectInstance()
         {
-            switch (flammable.Data.effectType)
+            switch (flammable.Data.EffectType)
             {
                 case FireEffectType.BIG:
                     fireEffectInstance = (GameObject)Instantiate(ResourceRegistry.FirePrefab, transform);
@@ -35,20 +34,19 @@ namespace Assets.Gamelogic.Fire
             {
                 CreateFireEffectInstance();
             }
-            flammable.ComponentUpdated.Add(OnComponentUpdated);
-            UpdateParticleSystem(flammable.Data.isOnFire);
+            flammable.ComponentUpdated += OnComponentUpdated;
+            UpdateParticleSystem(flammable.Data.IsOnFire);
         }
 
         private void OnDisable()
         {
-            flammable.ComponentUpdated.Remove(OnComponentUpdated);
         }
 
         private void OnComponentUpdated(Flammable.Update update)
         {
-            if(update.isOnFire.HasValue)
+            if(update.IsOnFire.HasValue)
             {
-                UpdateParticleSystem(update.isOnFire.Value);
+                UpdateParticleSystem(update.IsOnFire.Value);
             }
         }
 

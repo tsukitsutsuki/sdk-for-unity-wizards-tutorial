@@ -5,29 +5,36 @@ using Improbable.Npc;
 using Assets.Gamelogic.Core;
 using Assets.Gamelogic.NPC.Lumberjack;
 using Assets.Gamelogic.Utils;
-using Improbable;
 using Improbable.Core;
 using Improbable.Tree;
-using Improbable.Unity.Core;
-using Improbable.Worker;
+using Improbable.Worker.CInterop;
+using Improbable.Gdk.GameObjectRepresentation;
+using Improbable.Gdk.Core;
 
 namespace Assets.Gamelogic.NPC.LumberJack
 {
     public class LumberjackHarvestingState : FsmBaseState<LumberjackStateMachine, LumberjackFSMState.StateEnum>
     {
         private readonly LumberjackBehaviour parentBehaviour;
-        private readonly Inventory.Writer inventory;
+        private readonly Inventory.Requirable.Writer inventory;
+        private readonly Harvestable.Requirable.CommandRequestSender harvestableRequestSender;
+        private readonly Harvestable.Requirable.CommandResponseHandler harvestableResponseHandler;
 
         private Coroutine harvestTreeDelayCoroutine;
         private Coroutine transitionToIdleDelayCoroutine;
 
         public LumberjackHarvestingState(LumberjackStateMachine owner,
                                          LumberjackBehaviour inParentBehaviour,
-                                         Inventory.Writer inInventory)
+                                         Inventory.Requirable.Writer inInventory,
+                                         Harvestable.Requirable.CommandRequestSender inHarvestableRequestSender,
+                                         Harvestable.Requirable.CommandResponseHandler inHarvestableResponseHandler)
             : base(owner)
         {
             parentBehaviour = inParentBehaviour;
             inventory = inInventory;
+            harvestableRequestSender = inHarvestableRequestSender;
+            harvestableResponseHandler = inHarvestableResponseHandler;
+            harvestableResponseHandler.OnHarvestResponse += OnHarvestResponse;
         }
 
         public override void Enter()
@@ -72,15 +79,13 @@ namespace Assets.Gamelogic.NPC.LumberJack
 
         private void AttemptToHarvestTree()
         {
-            var targetGameObject = NPCUtils.GetTargetGameObject(Owner.Data.targetEntityId);
+            var targetGameObject = NPCUtils.GetTargetGameObject(parentBehaviour.gameObject, Owner.Data.TargetEntityId);
             if (targetGameObject != null && NPCUtils.IsTargetAHealthyTree(parentBehaviour.gameObject, targetGameObject))
             {
-                SpatialOS.Commands.SendCommand(inventory,
-                                               Harvestable.Commands.Harvest.Descriptor,
-                                               new HarvestRequest(parentBehaviour.gameObject.EntityId()),
-                                               Owner.Data.targetEntityId,
-                                               OnHarvestResponse,
-                                               new System.TimeSpan(0, 0, 5));
+                var parentComponent = parentBehaviour.gameObject.GetComponent<SpatialOSComponent>();
+                harvestableRequestSender.SendHarvestRequest(Owner.Data.TargetEntityId,
+                                               new HarvestRequest(parentComponent.SpatialEntityId),
+                                               (uint)new System.TimeSpan(0, 0, 5).TotalMilliseconds);
             }
             else
             {
@@ -88,7 +93,7 @@ namespace Assets.Gamelogic.NPC.LumberJack
             }
         }
 
-        private void OnHarvestResponse(ICommandCallbackResponse<HarvestResponse> response)
+        private void OnHarvestResponse(Harvestable.Harvest.ReceivedResponse response)
         {
             if (response.StatusCode != StatusCode.Success)
             {
@@ -96,7 +101,10 @@ namespace Assets.Gamelogic.NPC.LumberJack
             }
             else
             {
-                inventory.AddToInventory(response.Response.Value.resourcesTaken);
+                if (response.ResponsePayload.HasValue)
+                {
+                    inventory.AddToInventory(response.ResponsePayload.Value.ResourcesTaken);
+                }
             }
             TransitionToIdle();
         }

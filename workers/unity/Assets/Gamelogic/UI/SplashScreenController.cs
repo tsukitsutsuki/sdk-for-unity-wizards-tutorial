@@ -1,7 +1,6 @@
-﻿using Assets.Gamelogic.Core;
-using Assets.Gamelogic.Utils;
-using Improbable.Unity.Core;
-using System;
+﻿using Assets.Gamelogic.Worker;
+using Improbable.PlayerLifecycle;
+using Improbable.Worker.CInterop;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,43 +12,53 @@ namespace Assets.Gamelogic.UI
         [SerializeField] private Button ConnectButton;
         [SerializeField] private GameObject Spinner;
 
+        private void OnEnable()
+        {
+            NotReadyWarning.SetActive(true);
+            ConnectButton.interactable = false;
+        }
+
+        public void OnCreatePlayerResponse(PlayerCreator.CreatePlayer.ReceivedResponse obj)
+        {
+            if (obj.StatusCode != StatusCode.Success)
+            {
+                NotReadyWarning.SetActive(true);
+                Spinner.SetActive(false);
+                ConnectButton.interactable = true;
+            }
+            else
+            {
+                gameObject.SetActive(false);
+            }
+        }
+
+        public void ReadyToConnect()
+        {
+            NotReadyWarning.SetActive(false);
+            Spinner.SetActive(false);
+            ConnectButton.interactable = true;
+        }
+
+        public void Disconnected()
+        {
+            gameObject.SetActive(true);
+            NotReadyWarning.SetActive(true);
+            Spinner.SetActive(false);
+            ConnectButton.interactable = true;
+        }
+
         public void AttemptToConnect()
         {
-            DisableConnectButton();
-
+            ConnectButton.interactable = false;
             Spinner.SetActive(true);
             NotReadyWarning.SetActive(false);
 
             AttemptConnection();
         }
 
-        private void DisableConnectButton()
-        {
-            ConnectButton.interactable = false;
-        }
-
         private void AttemptConnection()
         {
-            Bootstrap bootstrap = FindObjectOfType<Bootstrap>();
-            if (!bootstrap)
-            {
-                throw new Exception("Couldn't find Bootstrap script on GameEntry in UnityScene");
-            }
-            bootstrap.ConnectToClient();
-            StartCoroutine(TimerUtils.WaitAndPerform(SimulationSettings.ClientConnectionTimeoutSecs, ConnectionTimeout));
-        }
-
-        private void ConnectionTimeout()
-        {
-            if (SpatialOS.IsConnected)
-            {
-                SpatialOS.Disconnect();
-            }
-
-            NotReadyWarning.SetActive(true);
-            Spinner.SetActive(false);
-            ConnectButton.interactable = true;
+            ClientWorkerHandler.ConnectionController.ConnectAction();
         }
     }
 }
-

@@ -1,36 +1,33 @@
 using Assets.Gamelogic.ComponentExtensions;
-using Improbable;
 using Improbable.Building;
-using Improbable.Core;
-using Improbable.Entity.Component;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Life;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Building
 {
     public class StockpileDepositoryBehaviour : MonoBehaviour
     {
-        [Require] private StockpileDepository.Writer stockpileDepository;
-        [Require] private Health.Writer health;
+        [Require] private StockpileDepository.Requirable.Writer stockpileDepository;
+        [Require] private StockpileDepository.Requirable.CommandRequestHandler stockpileDepositoryRequestHandler;
+        [Require] private Health.Requirable.Writer health;
 
         private void OnEnable ()
-        { 
-            stockpileDepository.CommandReceiver.OnAddResource.RegisterResponse(OnAddResource);
+        {
+            stockpileDepositoryRequestHandler.OnAddResourceRequest += OnAddResource;
         }
 
         private void OnDisable()
         {
-            stockpileDepository.CommandReceiver.OnAddResource.DeregisterResponse();
         }
 
-        private Nothing OnAddResource(AddResource request, ICommandCallerInfo callerinfo)
+        private void OnAddResource(StockpileDepository.AddResource.RequestResponder request)
         {
-            if (stockpileDepository.Data.canAcceptResources)
+            if (stockpileDepository.Data.CanAcceptResources)
             {
-                health.AddCurrentHealthDelta(request.quantity);
+                health.AddCurrentHealthDelta(request.Request.Payload.Quantity);
             }
-            return new Nothing();
+            request.SendResponse(new Improbable.Core.Nothing());
         }
     }
 }

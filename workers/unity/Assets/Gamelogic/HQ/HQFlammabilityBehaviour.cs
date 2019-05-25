@@ -1,9 +1,8 @@
 ﻿using Assets.Gamelogic.Core;
 using Assets.Gamelogic.Fire;
 using Improbable.Fire;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Life;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
 
 namespace Assets.Gamelogic.HQ
@@ -11,8 +10,9 @@ namespace Assets.Gamelogic.HQ
     [WorkerType(WorkerPlatform.UnityWorker)]
     public class HQFlammabilityBehaviour : MonoBehaviour
     {
-        [Require] private Health.Writer health;
-        [Require] private Flammable.Writer flammable;
+        [Require] private Health.Requirable.Writer health;
+        [Require] private Flammable.Requirable.CommandRequestSender flammableRequestSender;
+        [Require] private Flammable.Requirable.Writer flammable;
         [SerializeField] private FlammableBehaviour flammableBehaviour;
 
         private void Awake()
@@ -22,19 +22,18 @@ namespace Assets.Gamelogic.HQ
 
         private void OnEnable()
         {
-            health.ComponentUpdated.Add(OnHealthUpdated);
+            health.ComponentUpdated += OnHealthUpdated;
         }
 
         private void OnDisable()
         {
-            health.ComponentUpdated.Remove(OnHealthUpdated);
         }
 
         private void OnHealthUpdated(Health.Update update)
         {
-            if (update.currentHealth.HasValue)
+            if (update.CurrentHealth.HasValue)
             {
-                UpdateHQFlammablility(update.currentHealth.Value);
+                UpdateHQFlammablility(update.CurrentHealth.Value);
             }
         }
 
@@ -42,12 +41,12 @@ namespace Assets.Gamelogic.HQ
         {
             if (healthValue <= 0)
             {
-                flammableBehaviour.SelfExtinguish(health, false);
+                flammableBehaviour.SelfExtinguish(flammableRequestSender, false);
             }
             else
             {
                 var canBeIgnited = healthValue > 0;
-                flammableBehaviour.SelfSetCanBeIgnited(health, canBeIgnited);
+                flammableBehaviour.SelfSetCanBeIgnited(flammableRequestSender, canBeIgnited);
             }
         }
     }

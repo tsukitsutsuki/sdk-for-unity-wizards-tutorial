@@ -1,11 +1,12 @@
 using Assets.Gamelogic.Core;
 using Assets.Gamelogic.FSM;
 using Assets.Gamelogic.Team;
+using Assets.Gamelogic.Utils;
+using System.Collections.Generic;
+using UnityEngine;
 using Improbable;
 using Improbable.Npc;
-using System.Collections.Generic;
-using Assets.Gamelogic.Utils;
-using UnityEngine;
+using Improbable.Gdk.Core;
 
 namespace Assets.Gamelogic.NPC.Wizard
 {
@@ -48,7 +49,7 @@ namespace Assets.Gamelogic.NPC.Wizard
             var approximateHqPosition = cachedTeamHqCoordinates[enemyTeamId];
             var x = approximateHqPosition.X + (-SimulationSettings.NPCSpawnDistanceToHQ / 2) + (SimulationSettings.NPCSpawnDistanceToHQ * Random.value);
             var z = approximateHqPosition.Z + (-SimulationSettings.NPCSpawnDistanceToHQ / 2) + (SimulationSettings.NPCSpawnDistanceToHQ * Random.value);
-            cachedTeamHqCoordinates[enemyTeamId] = new Coordinates(x, approximateHqPosition.y, z);
+            cachedTeamHqCoordinates[enemyTeamId] = new Coordinates(x, approximateHqPosition.Y, z);
 
             MoveToPosition(approximateHqPosition.ToVector3());
         }

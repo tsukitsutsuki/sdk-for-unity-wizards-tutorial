@@ -1,34 +1,32 @@
 using Assets.Gamelogic.ComponentExtensions;
 using Assets.Gamelogic.Core;
 using Assets.Gamelogic.Life;
-using Improbable.Entity.Component;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Life;
 using Improbable.Tree;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Tree
 {
     public class HarvestableBehaviour : MonoBehaviour
     {
-        [Require] private Harvestable.Writer harvestable;
-        [Require] private Health.Writer health;
+        [Require] private Harvestable.Requirable.CommandRequestHandler harvestable;
+        [Require] private Health.Requirable.Writer health;
 
         private void OnEnable()
         {
-            harvestable.CommandReceiver.OnHarvest.RegisterResponse(OnHarvest);
+            harvestable.OnHarvestRequest += OnHarvest;
         }
 
         private void OnDisable()
         {
-            harvestable.CommandReceiver.OnHarvest.DeregisterResponse();
         }
 
-        private HarvestResponse OnHarvest(HarvestRequest request, ICommandCallerInfo callerinfo)
+        private void OnHarvest(Harvestable.Harvest.RequestResponder request)
         {
-            var resourcesToGive = Mathf.Min(SimulationSettings.HarvestReturnQuantity, health.Data.currentHealth);
+            var resourcesToGive = Mathf.Min(SimulationSettings.HarvestReturnQuantity, health.Data.CurrentHealth);
             health.AddCurrentHealthDelta(-resourcesToGive);
-            return new HarvestResponse(resourcesToGive);
+            request.SendResponse(new HarvestResponse(resourcesToGive));
         }
     }
 }

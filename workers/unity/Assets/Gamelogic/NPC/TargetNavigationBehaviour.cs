@@ -1,10 +1,9 @@
 using Assets.Gamelogic.Core;
 using Assets.Gamelogic.Utils;
-using Improbable;
 using Improbable.Fire;
+using Improbable.Gdk.Core;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Npc;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
 
 namespace Assets.Gamelogic.NPC
@@ -12,42 +11,55 @@ namespace Assets.Gamelogic.NPC
     [WorkerType(WorkerPlatform.UnityWorker)]
     public class TargetNavigationBehaviour : MonoBehaviour
     {
-        [Require] private TargetNavigation.Writer targetNavigation;
-        [Require] private Flammable.Reader flammable;
+        [Require] private TargetNavigation.Requirable.Writer targetNavigation;
+        [Require] private Flammable.Requirable.Reader flammable;
 
         [SerializeField] private Rigidbody myRigidbody;
         [SerializeField] private Transform myTransform;
 
         private Vector3 targetPosition = SimulationSettings.InvalidPosition;
-        
+
+        private SpatialOSComponent spatialOSComponent;
+        private Vector3 origin;
+
         private void Awake()
         {
             myRigidbody = gameObject.GetComponentIfUnassigned(myRigidbody);
             myTransform = gameObject.GetComponentIfUnassigned(myTransform);
         }
 
-        public static bool IsInTransit(TargetNavigation.Reader targetNavigation)
+        private void OnEnable()
         {
-            return targetNavigation.Data.navigationState != NavigationState.INACTIVE;
+            spatialOSComponent = GetComponent<SpatialOSComponent>();
+            origin = spatialOSComponent.Worker.Origin;
+        }
+
+        public static bool IsInTransit(TargetNavigation.Requirable.Reader targetNavigation)
+        {
+            return targetNavigation.Data.NavigationState != NavigationState.INACTIVE;
         }
 
         public void StartNavigation(Vector3 position, float interactionSqrDistance)
         {
             var flatPosition = position.FlattenVector();
             targetNavigation.Send(new TargetNavigation.Update()
-                .SetNavigationState(NavigationState.POSITION)
-                .SetTargetPosition(flatPosition.ToVector3f())
-				.SetTargetEntityId(new EntityId())
-                .SetInteractionSqrDistance(interactionSqrDistance));
+            {
+                NavigationState = NavigationState.POSITION,
+                TargetPosition = flatPosition.ToVector3f(),
+                TargetEntityId = new EntityId(),
+                InteractionSqrDistance = interactionSqrDistance,
+            });
         }
 
         public void StartNavigation(EntityId targetEntityId, float interactionSqrDistance)
         {
             targetNavigation.Send(new TargetNavigation.Update()
-                .SetNavigationState(NavigationState.ENTITY)
-                .SetTargetPosition(SimulationSettings.InvalidPosition.ToVector3f())
-                .SetTargetEntityId(targetEntityId)
-                .SetInteractionSqrDistance(interactionSqrDistance));
+            {
+                NavigationState = NavigationState.ENTITY,
+                TargetPosition = SimulationSettings.InvalidPosition.ToVector3f(),
+                TargetEntityId = targetEntityId,
+                InteractionSqrDistance = interactionSqrDistance,
+            });
         }
 
         public void StopNavigation()
@@ -55,17 +67,19 @@ namespace Assets.Gamelogic.NPC
             if (IsInTransit(targetNavigation))
             {
                 targetNavigation.Send(new TargetNavigation.Update()
-                    .SetNavigationState(NavigationState.INACTIVE)
-                    .SetTargetPosition(SimulationSettings.InvalidPosition.ToVector3f())
-					.SetTargetEntityId(new EntityId())
-                    .SetInteractionSqrDistance(0f));
+                {
+                    NavigationState = NavigationState.INACTIVE,
+                    TargetPosition = SimulationSettings.InvalidPosition.ToVector3f(),
+                    TargetEntityId = new EntityId(),
+                    InteractionSqrDistance = 0f,
+                });
             }
         }
 
         public void FinishNavigation(bool success)
         {
             StopNavigation();
-            targetNavigation.Send(new TargetNavigation.Update().AddNavigationFinished(new NavigationFinished(success)));
+            targetNavigation.SendNavigationFinished(new NavigationFinished(success));
         }
 
         private void Update()
@@ -80,15 +94,22 @@ namespace Assets.Gamelogic.NPC
                 return;
             }
             
-            if (targetNavigation.Data.navigationState == NavigationState.ENTITY)
+            if (targetNavigation.Data.NavigationState == NavigationState.ENTITY)
             {
-                var targetGameObject = NPCUtils.GetTargetGameObject(targetNavigation.Data.targetEntityId);
-                targetPosition = targetGameObject != null ? targetGameObject.transform.position.FlattenVector() : SimulationSettings.InvalidPosition;
+                var targetGameObject = NPCUtils.GetTargetGameObject(gameObject, targetNavigation.Data.TargetEntityId);
+                if (targetGameObject != null)
+                {
+                    targetPosition = targetGameObject.transform.position.FlattenVector() + origin;
+                }
+                else
+                {
+                    targetPosition = SimulationSettings.InvalidPosition;
+                }
             }
 
-            if (targetNavigation.Data.navigationState == NavigationState.POSITION)
+            if (targetNavigation.Data.NavigationState == NavigationState.POSITION)
             {
-                targetPosition = targetNavigation.Data.targetPosition.ToVector3();
+                targetPosition = targetNavigation.Data.TargetPosition.ToVector3() + origin;
             }
 
             if (MathUtils.CompareEqualityEpsilon(targetPosition, SimulationSettings.InvalidPosition))
@@ -106,12 +127,12 @@ namespace Assets.Gamelogic.NPC
 
         private bool TargetPositionReached()
         {
-            return MathUtils.SqrDistance(myTransform.position, targetPosition) < targetNavigation.Data.interactionSqrDistance;
+            return MathUtils.SqrDistance(myTransform.position, targetPosition) < targetNavigation.Data.InteractionSqrDistance;
         }
 
         private void MoveTowardsTargetPosition(float deltaTime)
         {
-            var movementSpeed = SimulationSettings.NPCMovementSpeed * (flammable.Data.isOnFire ? SimulationSettings.OnFireMovementSpeedIncreaseFactor : 1f);
+            var movementSpeed = SimulationSettings.NPCMovementSpeed * (flammable.Data.IsOnFire ? SimulationSettings.OnFireMovementSpeedIncreaseFactor : 1f);
             var sqrDistanceToTarget = MathUtils.SqrDistance(targetPosition, myTransform.position);
             var distanceToTravel = movementSpeed * deltaTime;
             if ((distanceToTravel * distanceToTravel) < sqrDistanceToTarget)

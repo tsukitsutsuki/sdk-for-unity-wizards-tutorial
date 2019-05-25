@@ -1,9 +1,8 @@
 using Assets.Gamelogic.Utils;
 using Improbable;
 using Improbable.Core;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
-using Improbable.Worker;
+using Improbable.Gdk.GameObjectRepresentation;
+using Improbable.Worker.CInterop;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Core
@@ -11,12 +10,14 @@ namespace Assets.Gamelogic.Core
     [WorkerType(WorkerPlatform.UnityClient)]
     public class TransformReceiverClient : MonoBehaviour
     {
-        [Require] private Position.Reader positionComponent;
-        [Require] private TransformComponent.Reader transformComponent;
+        [Require] private Position.Requirable.Reader positionComponent;
+        [Require] private TransformComponent.Requirable.Reader transformComponent;
 
         private bool isRemote;
 
         [SerializeField] private Rigidbody myRigidbody;
+
+        private bool? isAuthoritativePlayer;
 
         private void Awake()
         {
@@ -25,28 +26,24 @@ namespace Assets.Gamelogic.Core
 
         private void OnEnable()
         {
-            transformComponent.ComponentUpdated.Add(OnTransformComponentUpdated);
+            transformComponent.OnTeleportEvent += OnTransformComponentUpdated;
             if (IsNotAnAuthoritativePlayer())
             {
                 SetUpRemoteTransform();
-            }     
+            }
         }
 
         private void OnDisable()
         {
-            transformComponent.ComponentUpdated.Remove(OnTransformComponentUpdated);
             if (isRemote)
             {
                 TearDownRemoveTransform();
             }
         }
 
-        private void OnTransformComponentUpdated(TransformComponent.Update update)
+        private void OnTransformComponentUpdated(TeleportEvent update)
         {
-            for (int i = 0; i < update.teleportEvent.Count; i++)
-            {
-                TeleportTo(update.teleportEvent[i].targetPosition.ToVector3());
-            }
+            TeleportTo(update.TargetPosition.ToVector3());
         }
 
         private void TeleportTo(Vector3 position)
@@ -57,15 +54,19 @@ namespace Assets.Gamelogic.Core
 
         private bool IsNotAnAuthoritativePlayer()
         {
-            return gameObject.GetAuthority(ClientAuthorityCheck.ComponentId) == Authority.NotAuthoritative;
+            if (!isAuthoritativePlayer.HasValue)
+            {
+                isAuthoritativePlayer = Player.PlayerAuthority.IsAuth(gameObject);
+            }
+            return !isAuthoritativePlayer.Value;
         }
 
         private void Update()
         {
             if (IsNotAnAuthoritativePlayer())
             {
-                myRigidbody.MovePosition(Vector3.Lerp(myRigidbody.position, positionComponent.Data.coords.ToVector3(), 0.2f));
-                myRigidbody.MoveRotation(Quaternion.Euler(0f, QuantizationUtils.DequantizeAngle(transformComponent.Data.rotation), 0f));
+                myRigidbody.MovePosition(Vector3.Lerp(myRigidbody.position, positionComponent.Data.Coords.ToVector3(), 0.2f));
+                myRigidbody.MoveRotation(Quaternion.Euler(0f, QuantizationUtils.DequantizeAngle(transformComponent.Data.Rotation), 0f));
             }
             else if(isRemote)
             {

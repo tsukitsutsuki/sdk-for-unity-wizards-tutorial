@@ -1,8 +1,7 @@
 using Assets.Gamelogic.Core;
 using Improbable.Fire;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Npc;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
 
 namespace Assets.Gamelogic.NPC.Wizard
@@ -10,9 +9,9 @@ namespace Assets.Gamelogic.NPC.Wizard
     [WorkerType(WorkerPlatform.UnityClient)]
     public class WizardAnimationController : MonoBehaviour {
 
-        [Require] private NPCWizard.Reader npcWizard;
-        [Require] private TargetNavigation.Reader targetNavigation;
-        [Require] private Flammable.Reader flammable;
+        [Require] private NPCWizard.Requirable.Reader npcWizard;
+        [Require] private TargetNavigation.Requirable.Reader targetNavigation;
+        [Require] private Flammable.Requirable.Reader flammable;
 
         [SerializeField] private Animator anim;
         public ParticleSystem CastAnim;
@@ -24,32 +23,29 @@ namespace Assets.Gamelogic.NPC.Wizard
 
         private void OnEnable()
         {
-            npcWizard.ComponentUpdated.Add(StateUpdated);
-            targetNavigation.ComponentUpdated.Add(NavigationUpdated);
-            flammable.ComponentUpdated.Add(FlammableUpdated);
+            npcWizard.ComponentUpdated += StateUpdated;
+            targetNavigation.ComponentUpdated += NavigationUpdated;
+            flammable.ComponentUpdated += FlammableUpdated;
             ResetAllAnimationState();
-            SetAnimationState(npcWizard.Data.currentState);
+            SetAnimationState(npcWizard.Data.CurrentState);
             SetForwardSpeed(TargetNavigationBehaviour.IsInTransit(targetNavigation));
         }
 
         private void OnDisable()
         {
-            npcWizard.ComponentUpdated.Remove(StateUpdated);
-            targetNavigation.ComponentUpdated.Remove(NavigationUpdated);
-            flammable.ComponentUpdated.Remove(FlammableUpdated);
         }
 
         public void StateUpdated(NPCWizard.Update stateUpdate)
         {
-            if (stateUpdate.currentState.HasValue)
+            if (stateUpdate.CurrentState.HasValue)
             {
-                SetAnimationState(stateUpdate.currentState.Value);
+                SetAnimationState(stateUpdate.CurrentState.Value);
             }
         }
 
         private void NavigationUpdated(TargetNavigation.Update navigationUpdate)
         {
-            if (navigationUpdate.navigationState.HasValue)
+            if (navigationUpdate.NavigationState.HasValue)
             {
                 SetForwardSpeed(TargetNavigationBehaviour.IsInTransit(targetNavigation));
             }
@@ -57,9 +53,9 @@ namespace Assets.Gamelogic.NPC.Wizard
 
         private void FlammableUpdated(Flammable.Update update)
         {
-            if (update.isOnFire.HasValue)
+            if (update.IsOnFire.HasValue)
             {
-                anim.SetBool("OnFire", update.isOnFire.Value);
+                anim.SetBool("OnFire", update.IsOnFire.Value);
             }
         }
 

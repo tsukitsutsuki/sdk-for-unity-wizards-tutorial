@@ -3,12 +3,11 @@ using Assets.Gamelogic.Core;
 using Assets.Gamelogic.FSM;
 using Assets.Gamelogic.NPC.Lumberjack;
 using Assets.Gamelogic.Utils;
-using Improbable;
 using Improbable.Building;
 using Improbable.Core;
+using Improbable.Gdk.Core;
 using Improbable.Npc;
-using Improbable.Unity.Core;
-using Improbable.Worker;
+using Improbable.Worker.CInterop;
 using UnityEngine;
 
 namespace Assets.Gamelogic.NPC.LumberJack
@@ -16,18 +15,25 @@ namespace Assets.Gamelogic.NPC.LumberJack
     public class LumberjackStockpilingState : FsmBaseState<LumberjackStateMachine, LumberjackFSMState.StateEnum>
     {
         private readonly LumberjackBehaviour parentBehaviour;
-        private readonly Inventory.Writer inventory;
+        private readonly Inventory.Requirable.Writer inventory;
+        private readonly StockpileDepository.Requirable.CommandRequestSender stockpileDepositoryRequestSender;
+        private readonly StockpileDepository.Requirable.CommandResponseHandler stockpileDepositoryResponseHandler;
 
         private Coroutine addToStockpileDelayCoroutine;
         private Coroutine transitionToIdleDelayCoroutine;
 
         public LumberjackStockpilingState(LumberjackStateMachine owner,
                                           LumberjackBehaviour inParentBehaviour,
-                                          Inventory.Writer inInventory)
+                                          Inventory.Requirable.Writer inInventory,
+                                          StockpileDepository.Requirable.CommandRequestSender inStockpileDepositoryRequestSender,
+                                          StockpileDepository.Requirable.CommandResponseHandler inStockpileDepositoryResponseHandler)
             : base(owner)
         {
             parentBehaviour = inParentBehaviour;
             inventory = inInventory;
+            stockpileDepositoryRequestSender = inStockpileDepositoryRequestSender;
+            stockpileDepositoryResponseHandler = inStockpileDepositoryResponseHandler;
+            stockpileDepositoryResponseHandler.OnAddResourceResponse += OnStockpileResponse;
         }
 
         public override void Enter()
@@ -72,12 +78,11 @@ namespace Assets.Gamelogic.NPC.LumberJack
 
         private void AddToStockpile()
         {
-            var targetGameObject = NPCUtils.GetTargetGameObject(Owner.Data.targetEntityId);
+            var targetGameObject = NPCUtils.GetTargetGameObject(parentBehaviour.gameObject, Owner.Data.TargetEntityId);
             if (targetGameObject != null && NPCUtils.IsTargetATeamStockpile(parentBehaviour.gameObject, targetGameObject))
             {
-                var resourcesToAdd = inventory.Data.resources;
-                SpatialOS.Commands.SendCommand(inventory, StockpileDepository.Commands.AddResource.Descriptor,
-                    new AddResource(resourcesToAdd), Owner.Data.targetEntityId, response => OnStockpileResponse(response, resourcesToAdd));
+                var resourcesToAdd = inventory.Data.Resources;
+                stockpileDepositoryRequestSender.SendAddResourceRequest(Owner.Data.TargetEntityId, new AddResource(resourcesToAdd));
             }
             else
             {
@@ -85,7 +90,7 @@ namespace Assets.Gamelogic.NPC.LumberJack
             }
         }
 
-        private void OnStockpileResponse(ICommandCallbackResponse<Nothing> response, int resourcesToAdd)
+        private void OnStockpileResponse(StockpileDepository.AddResource.ReceivedResponse response)
         {
             if (response.StatusCode != StatusCode.Success)
             {
@@ -93,7 +98,7 @@ namespace Assets.Gamelogic.NPC.LumberJack
             }
             else
             {
-                inventory.RemoveFromInventory(resourcesToAdd);
+                inventory.RemoveFromInventory(response.RequestPayload.Quantity);
             }
             TransitionToIdle();
         }

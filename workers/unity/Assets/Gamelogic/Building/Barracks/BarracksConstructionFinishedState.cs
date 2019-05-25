@@ -6,15 +6,17 @@ namespace Assets.Gamelogic.Building.Barracks
 {
     public class BarracksConstructionFinishedState : FsmBaseState<BarracksStateMachine, BarracksState>
     {
-        private readonly Health.Writer health;
+        private readonly Health.Requirable.Writer health;
         private readonly NPCSpawnerBehaviour npcSpawnerBehaviour;
-        
+        private bool isEnter = false;
+
         public BarracksConstructionFinishedState(BarracksStateMachine owner, 
-                                                 Health.Writer inHealth,
+                                                 Health.Requirable.Writer inHealth,
                                                  NPCSpawnerBehaviour inNPCSpawnerBehaviour) : base(owner)
         {
             health = inHealth;
             npcSpawnerBehaviour = inNPCSpawnerBehaviour;
+            health.ComponentUpdated += OnHealthUpdated;
         }
 
         public override void Enter()
@@ -23,7 +25,7 @@ namespace Assets.Gamelogic.Building.Barracks
             npcSpawnerBehaviour.SetSpawningEnabled(true);
             npcSpawnerBehaviour.ResetCooldowns();
 
-            health.ComponentUpdated.Add(OnHealthUpdated);
+            isEnter = true;
         }
 
         public override void Tick()
@@ -32,12 +34,12 @@ namespace Assets.Gamelogic.Building.Barracks
 
         public override void Exit(bool disabled)
         {
-            health.ComponentUpdated.Remove(OnHealthUpdated);
+            isEnter = false;
         }
 
         private void OnHealthUpdated(Health.Update update)
         {
-            if (update.currentHealth.HasValue)
+            if (isEnter && update.CurrentHealth.HasValue)
             {
                 Owner.EvaluateAndSetFlammability(update);
                 EvaluateAndTransitionToUnderConstructionState(update);
@@ -46,7 +48,7 @@ namespace Assets.Gamelogic.Building.Barracks
         
         private void EvaluateAndTransitionToUnderConstructionState(Health.Update update)
         {
-            if (update.currentHealth.Value <= 0)
+            if (isEnter && update.CurrentHealth.Value <= 0)
             {
                 Owner.TriggerTransition(BarracksState.UNDER_CONSTRUCTION);
             }

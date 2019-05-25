@@ -2,7 +2,7 @@ using Assets.Gamelogic.Core;
 using Assets.Gamelogic.EntityTemplate;
 using Assets.Gamelogic.Utils;
 using Improbable;
-using Improbable.Worker;
+using Improbable.Gdk.Core;
 using UnityEngine;
 
 namespace Assets.Editor
@@ -11,13 +11,13 @@ namespace Assets.Editor
     {
         private static readonly System.Random rand = new System.Random();
 
-        public static void AddPlayerSpawner(SnapshotBuilder snapshot)
+        public static void AddPlayerSpawner(Snapshot snapshot)
         {
 			var entity = EntityTemplateFactory.CreatePlayerSpawnerTemplate();
-            snapshot.Add(snapshot.GenerateId(), entity);
+            snapshot.AddEntity(entity);
         }
 
-        public static void AddTrees(SnapshotBuilder snapshot, Texture2D sampler, float sampleThreshold, int countAproximate, double edgeLength, float placementJitter)
+        public static void AddTrees(Snapshot snapshot, Texture2D sampler, float sampleThreshold, int countAproximate, double edgeLength, float placementJitter)
         {
             var treeCountSqrt = Mathf.CeilToInt(Mathf.Sqrt(countAproximate));
             var spawnGridIntervals = edgeLength / treeCountSqrt;
@@ -39,34 +39,36 @@ namespace Assets.Editor
                         var zJitter = Random.Range(-placementJitter, placementJitter);
                         Vector3d positionJitter = new Vector3d(xJitter, 0d, zJitter);
 
-                        Coordinates worldRoot = new Coordinates(-edgeLength/2, 0, -edgeLength/2);
-                        Vector3d offsetFromWorldRoot = new Vector3d(x, 0d, z) * spawnGridIntervals;
-                        Coordinates spawnPosition = worldRoot + offsetFromWorldRoot + positionJitter;
+                        Vector3d offsetFromWorldRoot = new Vector3d(x * spawnGridIntervals, 0d, z * spawnGridIntervals);
+                        Coordinates spawnPosition = new Coordinates(
+                            (-edgeLength/2) + offsetFromWorldRoot.X + positionJitter.X,
+                            0 + offsetFromWorldRoot.Y + positionJitter.Y,
+                            (-edgeLength/2) + offsetFromWorldRoot.Z + positionJitter.Z
+                        );
                         AddTree(snapshot, spawnPosition);
                     }
                 }
             }
         }
 
-        public static void AddTree(SnapshotBuilder snapshot, Coordinates position)
+        public static void AddTree(Snapshot snapshot, Coordinates position)
         {
-            var treeEntityId = snapshot.GenerateId();
             var spawnRotation = (uint)Mathf.CeilToInt((float)rand.NextDouble() * 360.0f);
             var entity = EntityTemplateFactory.CreateTreeTemplate(position, spawnRotation);
-            snapshot.Add(treeEntityId, entity);
+            snapshot.AddEntity(entity);
         }
 
-        public static void AddHQs(SnapshotBuilder snapshot, Coordinates[] locations)
+        public static void AddHQs(Snapshot snapshot, Coordinates[] locations)
         {
             for (uint teamId = 0; teamId < locations.Length; teamId++)
             {
                 var position = locations[teamId];
                 var entity = EntityTemplateFactory.CreateHQTemplate(position, 0, teamId);
-                snapshot.Add(snapshot.GenerateId(), entity);
+                snapshot.AddEntity(entity);
             }
         }
 
-        public static void AddNPCsAroundHQs(SnapshotBuilder snapshot, Coordinates[] locations)
+        public static void AddNPCsAroundHQs(Snapshot snapshot, Coordinates[] locations)
         {
             for (uint teamId = 0; teamId < locations.Length; teamId++)
             {
@@ -74,7 +76,7 @@ namespace Assets.Editor
             }
         }
 
-        public static void SpawnNpcsAroundPosition(SnapshotBuilder snapshot, Coordinates position, uint team)
+        public static void SpawnNpcsAroundPosition(Snapshot snapshot, Coordinates position, uint team)
         {
             float totalNpcs = SimulationSettings.HQStartingWizardsCount + SimulationSettings.HQStartingLumberjacksCount;
             float radiusFromHQ = SimulationSettings.NPCSpawnDistanceToHQ;
@@ -86,7 +88,7 @@ namespace Assets.Editor
                 offset *= radiusFromHQ;
                 Coordinates coordinates = (position.ToVector3() + offset).ToCoordinates();
 
-                Entity entity = null;
+                EntityTemplate entity = null;
                 if (i < SimulationSettings.HQStartingLumberjacksCount)
                 {
                     entity = EntityTemplateFactory.CreateNPCLumberjackTemplate(coordinates, team);
@@ -96,8 +98,7 @@ namespace Assets.Editor
                     entity = EntityTemplateFactory.CreateNPCWizardTemplate(coordinates, team);
                 }
 
-                var id = snapshot.GenerateId();
-                snapshot.Add(id, entity);
+                snapshot.AddEntity(entity);
             }
         }
     }

@@ -1,9 +1,7 @@
-using System.Collections;
 using Assets.Gamelogic.Core;
 using Assets.Gamelogic.Utils;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Tree;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Tree
@@ -11,7 +9,7 @@ namespace Assets.Gamelogic.Tree
     [WorkerType(WorkerPlatform.UnityClient)]
     public class TreeModelVisualizer : MonoBehaviour
     {
-        [Require] private TreeState.Reader treeState;
+        [Require] private TreeState.Requirable.Reader treeState;
 
         [SerializeField] private GameObject HealthyTree;
         [SerializeField] private GameObject Stump;
@@ -21,24 +19,24 @@ namespace Assets.Gamelogic.Tree
         private void OnEnable()
         {
             SetupTreeModel();
-            treeState.ComponentUpdated.Add(UpdateVisualization);
-            ShowTreeModel(treeState.Data.currentState);
+            treeState.ComponentUpdated += UpdateVisualization;
+            ShowTreeModel(treeState.Data.CurrentState);
         }
 
         private void OnDisable()
         {
-            treeState.ComponentUpdated.Remove(UpdateVisualization);
+            treeState.ComponentUpdated -= UpdateVisualization;
         }
 
         private void SetupTreeModel()
         {
-            var treeModel = meshes[(int)treeState.Data.treeType];
+            var treeModel = meshes[(int)treeState.Data.TreeType];
             HealthyTree.GetComponent<MeshFilter>().mesh = treeModel;
         }
 
         private void UpdateVisualization(TreeState.Update newState)
         {
-            ShowTreeModel(newState.currentState.Value);
+            ShowTreeModel(newState.CurrentState.Value);
         }
 
         private void ShowTreeModel(TreeFSMState currentState)

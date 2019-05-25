@@ -1,5 +1,4 @@
-﻿using Improbable.Unity;
-using Improbable.Unity.Visualizer;
+﻿using Improbable.Gdk.GameObjectRepresentation;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Core

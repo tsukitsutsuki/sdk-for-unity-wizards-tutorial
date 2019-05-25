@@ -1,7 +1,6 @@
 using Assets.Gamelogic.Core;
 using Improbable.Fire;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
+using Improbable.Gdk.GameObjectRepresentation;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Fire
@@ -9,7 +8,7 @@ namespace Assets.Gamelogic.Fire
     [WorkerType(WorkerPlatform.UnityClient)]
     public class FlammableAudioTriggers : MonoBehaviour
     {
-        [Require] private Flammable.Reader flammable;
+        [Require] private Flammable.Requirable.Reader flammable;
 
         [SerializeField] private AudioSource audioSource;
         [SerializeField] private AudioClip Ignite;
@@ -24,19 +23,18 @@ namespace Assets.Gamelogic.Fire
 
         private void OnEnable()
         {
-            flammable.ComponentUpdated.Add(OnFireChange);
+            flammable.ComponentUpdated += OnFireChange;
         }
 
         private void OnDisable()
         {
-            flammable.ComponentUpdated.Remove(OnFireChange);
         }
 
         private void OnFireChange(Flammable.Update fireChange)
         {
-            if (fireChange.isOnFire.HasValue)
+            if (fireChange.IsOnFire.HasValue)
             {
-                if (fireChange.isOnFire.Value)
+                if (fireChange.IsOnFire.Value)
                 {
                     TriggerIgnitionSound();
                     StartFireAudio();

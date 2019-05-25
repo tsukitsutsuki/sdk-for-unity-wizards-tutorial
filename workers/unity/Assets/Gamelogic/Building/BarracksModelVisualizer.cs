@@ -1,6 +1,5 @@
 using Improbable.Building;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
+using Improbable.Gdk.GameObjectRepresentation;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Building
@@ -8,7 +7,7 @@ namespace Assets.Gamelogic.Building
     [WorkerType(WorkerPlatform.UnityClient)]
     public class BarracksModelVisualizer : MonoBehaviour
     {
-        [Require] BarracksInfo.Reader barracksInfo;
+        [Require] BarracksInfo.Requirable.Reader barracksInfo;
         
         [SerializeField] private ParticleSystem transition;
         [SerializeField] private GameObject buildingModel;
@@ -16,21 +15,20 @@ namespace Assets.Gamelogic.Building
 
         private void OnEnable()
         {
-            SwitchToBarracksState(barracksInfo.Data.barracksState);
-            barracksInfo.ComponentUpdated.Add(OnComponentUpdated);
+            SwitchToBarracksState(barracksInfo.Data.BarracksState);
+            barracksInfo.ComponentUpdated += OnComponentUpdated;
         }
 
         private void OnDisable()
         {
-            barracksInfo.ComponentUpdated.Remove(OnComponentUpdated);
         }
 
         private void OnComponentUpdated(BarracksInfo.Update update)
         {
-            if (update.barracksState.HasValue)
+            if (update.BarracksState.HasValue)
             {
                 transition.Play();
-                SwitchToBarracksState(update.barracksState.Value);
+                SwitchToBarracksState(update.BarracksState.Value);
             }
         }
 

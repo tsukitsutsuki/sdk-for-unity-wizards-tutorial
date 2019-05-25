@@ -1,11 +1,9 @@
 using Assets.Gamelogic.Core;
 using Assets.Gamelogic.Fire;
-using Assets.Gamelogic.Life;
 using Improbable.Fire;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Life;
 using Improbable.Tree;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Tree
@@ -13,9 +11,10 @@ namespace Assets.Gamelogic.Tree
     [WorkerType(WorkerPlatform.UnityWorker)]
     public class TreeBehaviour : MonoBehaviour
     {
-        [Require] private TreeState.Writer tree;
-        [Require] private Flammable.Writer flammable;
-        [Require] private Health.Writer health;
+        [Require] private TreeState.Requirable.Writer tree;
+        [Require] private Flammable.Requirable.Writer flammable;
+        [Require] private Flammable.Requirable.CommandRequestSender flammableRequestSender;
+        [Require] private Health.Requirable.Writer health;
 
         [SerializeField] private FlammableBehaviour flammableInterface;
 
@@ -32,9 +31,10 @@ namespace Assets.Gamelogic.Tree
                 tree,
                 health,
                 flammableInterface,
-                flammable);
+                flammable,
+                flammableRequestSender);
 
-            stateMachine.OnEnable(tree.Data.currentState);
+            stateMachine.OnEnable(tree.Data.CurrentState);
         }
 
         private void OnDisable()

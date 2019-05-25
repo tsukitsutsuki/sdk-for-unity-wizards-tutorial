@@ -2,18 +2,17 @@ using Assets.Gamelogic.Core;
 using Assets.Gamelogic.Utils;
 using Improbable.Fire;
 using Improbable.Life;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
 using Assets.Gamelogic.ComponentExtensions;
+using Improbable.Gdk.GameObjectRepresentation;
 
 namespace Assets.Gamelogic.Fire
 {
     [WorkerType(WorkerPlatform.UnityWorker)]
     class FireHealthInteractionBehaviour : MonoBehaviour
     {
-        [Require] private Health.Writer health;
-        [Require] private Flammable.Reader flammable;
+        [Require] private Health.Requirable.Writer health;
+        [Require] private Flammable.Requirable.Reader flammable;
 
         // note: This parameter is overwritable if you want to control the speed at which an entity takes damage, e.g. for trees
         public float FireDamageInterval = SimulationSettings.DefaultFireDamageInterval;
@@ -21,26 +20,24 @@ namespace Assets.Gamelogic.Fire
 
         private void OnEnable()
         {
-            if (flammable.Data.isOnFire)
+            if (flammable.Data.IsOnFire)
             {
                 StartDamageRoutine();
             }
 
-            flammable.ComponentUpdated.Add(FlammableOnComponentUpdated);
+            flammable.ComponentUpdated += FlammableOnComponentUpdated;
         }
 
         private void OnDisable()
         {
             CancelDamageRoutine();
-
-            flammable.ComponentUpdated.Remove(FlammableOnComponentUpdated);
         }
 
         private void FlammableOnComponentUpdated(Flammable.Update update)
         {
-            if (update.isOnFire.HasValue)
+            if (update.IsOnFire.HasValue)
             {
-                if (flammable.Data.isOnFire)
+                if (flammable.Data.IsOnFire)
                 {
                     StartDamageRoutine();
                 }

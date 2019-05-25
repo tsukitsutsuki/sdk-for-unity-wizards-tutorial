@@ -2,22 +2,22 @@ using Assets.Gamelogic.Abilities;
 using Assets.Gamelogic.Core;
 using Assets.Gamelogic.Fire;
 using Assets.Gamelogic.Team;
+using System.Collections.Generic;
+using UnityEngine;
 using Improbable;
 using Improbable.Abilities;
-using Improbable.Collections;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Npc;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
-using UnityEngine;
+using Improbable.Gdk.Core;
 
 namespace Assets.Gamelogic.NPC.Wizard
 {
     [WorkerType(WorkerPlatform.UnityWorker)]
     public class WizardBehaviour : MonoBehaviour, IFlammable
     {
-        [Require] private NPCWizard.Writer npcWizard;
-        [Require] private TargetNavigation.Writer targetNavigation;
-        [Require] private Spells.Writer spells;
+        [Require] private NPCWizard.Requirable.Writer npcWizard;
+        [Require] private TargetNavigation.Requirable.Writer targetNavigation;
+        [Require] private Spells.Requirable.Writer spells;
 
         [SerializeField] private SpellsBehaviour spellsBehaviour;
         [SerializeField] private TeamAssignmentVisualizerUnityWorker teamAssignment;
@@ -37,7 +37,7 @@ namespace Assets.Gamelogic.NPC.Wizard
         {
             cachedTeamHqCoordinates = new List<Coordinates>(SimulationSettings.TeamHQLocations);
             stateMachine = new WizardStateMachine(this, npcWizard, navigation, teamAssignment, targetNavigation, spellsBehaviour, cachedTeamHqCoordinates);
-            stateMachine.OnEnable(npcWizard.Data.currentState);
+            stateMachine.OnEnable(npcWizard.Data.CurrentState);
         }
 
         private void OnDisable()

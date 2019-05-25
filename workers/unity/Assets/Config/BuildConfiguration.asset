@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: add92caab7fb7f24589c2e7198c19491, type: 3}
+  m_Name: BuildConfiguration
+  m_EditorClassIdentifier: 
+  WorkerBuildConfigurations:
+  - WorkerType: UnityClient
+    ScenesForWorker:
+    - {fileID: 102900000, guid: 10f5ea66eb0460a418d0d84b23e67197, type: 3}
+    - {fileID: 102900000, guid: e885a7b936a59394387a9b449aded1e9, type: 3}
+    LocalBuildConfig:
+      BuildPlatforms: 1
+      BuildOptions: 1
+    CloudBuildConfig:
+      BuildPlatforms: 1
+      BuildOptions: 0
+  - WorkerType: UnityGameLogic
+    ScenesForWorker:
+    - {fileID: 102900000, guid: c8328e98bbcdcf1459d3949d07da124f, type: 3}
+    LocalBuildConfig:
+      BuildPlatforms: 1
+      BuildOptions: 16384
+    CloudBuildConfig:
+      BuildPlatforms: 8
+      BuildOptions: 16384
+  isInitialised: 1

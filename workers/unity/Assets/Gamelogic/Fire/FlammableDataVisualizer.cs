@@ -1,7 +1,6 @@
 using System;
 using Improbable.Fire;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
+using Improbable.Gdk.GameObjectRepresentation;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Fire
@@ -9,24 +8,23 @@ namespace Assets.Gamelogic.Fire
     [WorkerType(WorkerPlatform.UnityWorker)]
     public class FlammableDataVisualizer : MonoBehaviour
     {
-        [Require] private Flammable.Reader flammable;
+        [Require] private Flammable.Requirable.Reader flammable;
         public bool canBeIgnited { get; private set; }
 
         void OnEnable()
         {
-            flammable.ComponentUpdated.Add(FlammableOnComponentUpdated);
-            canBeIgnited = flammable.Data.canBeIgnited;
+            flammable.ComponentUpdated += FlammableOnComponentUpdated;
+            canBeIgnited = flammable.Data.CanBeIgnited;
         }
 
         void OnDisable()
         {
-            flammable.ComponentUpdated.Remove(FlammableOnComponentUpdated);
             canBeIgnited = false;
         }
 
         private void FlammableOnComponentUpdated(Flammable.Update update)
         {
-            canBeIgnited = flammable.Data.canBeIgnited;
+            canBeIgnited = flammable.Data.CanBeIgnited;
         }
 
         public void SetLocalCanBeIgnited(bool ignitable)

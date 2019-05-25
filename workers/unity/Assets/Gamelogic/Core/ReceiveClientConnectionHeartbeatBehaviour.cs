@@ -1,11 +1,9 @@
 ﻿using UnityEngine;
 using Assets.Gamelogic.Utils;
-using Improbable;
 using Improbable.Core;
-using Improbable.Entity.Component;
-using Improbable.Unity;
-using Improbable.Unity.Core;
-using Improbable.Unity.Visualizer;
+using Improbable.Gdk.GameObjectRepresentation;
+using Improbable.Gdk.Core.Commands;
+using Improbable.Worker.CInterop;
 
 namespace Assets.Gamelogic.Core
 {
@@ -16,31 +14,34 @@ namespace Assets.Gamelogic.Core
     [WorkerType(WorkerPlatform.UnityWorker)]
     public class ReceiveClientConnectionHeartbeatBehaviour : MonoBehaviour
     {
-        [Require] private ConnectionHeartbeat.Writer heartbeat;
+        [Require] private ConnectionHeartbeat.Requirable.Writer heartbeat;
+        [Require] private ConnectionHeartbeat.Requirable.CommandRequestHandler heartbeatRequestHandler;
+        [Require] private WorldCommands.Requirable.WorldCommandRequestSender worldCommandRequestSender;
+        [Require] private WorldCommands.Requirable.WorldCommandResponseHandler worldCommandResponseHandler;
 
         private Coroutine heartbeatCoroutine;
 
         private void OnEnable()
         {
-            heartbeat.CommandReceiver.OnHeartbeat.RegisterResponse(OnHeartbeat);
+            heartbeatRequestHandler.OnHeartbeatRequest += OnHeartbeat;
+            worldCommandResponseHandler.OnDeleteEntityResponse += OnDeleteEntityResponse;
             heartbeatCoroutine = StartCoroutine(TimerUtils.CallRepeatedly(SimulationSettings.HeartbeatCheckInterval, CheckHeartbeat));
         }
 
         private void OnDisable()
         {
-            heartbeat.CommandReceiver.OnHeartbeat.DeregisterResponse();
             StopCoroutine(heartbeatCoroutine);
         }
 
-        private Nothing OnHeartbeat(Nothing request, ICommandCallerInfo callerinfo)
+        private void OnHeartbeat(ConnectionHeartbeat.Heartbeat.RequestResponder request)
         {
             SetHeartbeat(SimulationSettings.DefaultHeartbeatsBeforeTimeout);
-            return new Nothing();
+            request.SendResponse(new Nothing());
         }
 
         private void CheckHeartbeat()
         {
-            var heartbeatsRemainingBeforeTimeout = heartbeat.Data.timeoutBeats;
+            var heartbeatsRemainingBeforeTimeout = heartbeat.Data.TimeoutBeats;
             if (heartbeatsRemainingBeforeTimeout == 0)
             {
                 StopCoroutine(heartbeatCoroutine);
@@ -49,23 +50,25 @@ namespace Assets.Gamelogic.Core
             }
             SetHeartbeat(heartbeatsRemainingBeforeTimeout - 1);
         }
+
         private void SetHeartbeat(uint beats)
         {
             var update = new ConnectionHeartbeat.Update();
-            update.SetTimeoutBeats(beats);
+            update.TimeoutBeats = beats;
             heartbeat.Send(update);
         }
 
         private void DeleteInactiveEntity()
         {
-            SpatialOS.Commands.DeleteEntity(heartbeat, gameObject.EntityId())
-                .OnFailure(OnDeleteFailure);
+            worldCommandRequestSender.DeleteEntity(gameObject.GetComponent<SpatialOSComponent>().SpatialEntityId);
         }
 
-        private void OnDeleteFailure(ICommandErrorDetails commandErrorDetails)
+        private void OnDeleteEntityResponse(WorldCommands.DeleteEntity.ReceivedResponse response)
         {
-            Debug.LogErrorFormat("Failed to Delete Inactive Entity {0}: {1}", gameObject.EntityId(), commandErrorDetails.ErrorMessage);
+            if (response.StatusCode != StatusCode.Success)
+            {
+                Debug.LogErrorFormat("Failed to Delete Inactive Entity (#{0}) on quit: {1}", response.RequestPayload.EntityId, response.Message);
+            }
         }
-
     }
 }

@@ -2,9 +2,8 @@ using System;
 using Assets.Gamelogic.Core;
 using Improbable.Core;
 using Improbable.Fire;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Npc;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
 
 namespace Assets.Gamelogic.NPC.Lumberjack
@@ -12,10 +11,10 @@ namespace Assets.Gamelogic.NPC.Lumberjack
     [WorkerType(WorkerPlatform.UnityClient)]
     public class LumberjackAnimationController : MonoBehaviour
     {
-        [Require] private NPCLumberjack.Reader npcLumberjack;
-        [Require] private TargetNavigation.Reader targetNavigation;
-        [Require] private Flammable.Reader flammable;
-        [Require] private Inventory.Reader inventory;
+        [Require] private NPCLumberjack.Requirable.Reader npcLumberjack;
+        [Require] private TargetNavigation.Requirable.Reader targetNavigation;
+        [Require] private Flammable.Requirable.Reader flammable;
+        [Require] private Inventory.Requirable.Reader inventory;
 
         [SerializeField] private AudioSource audioSource;
         [SerializeField] private Animator anim;
@@ -35,21 +34,17 @@ namespace Assets.Gamelogic.NPC.Lumberjack
 
         private void OnEnable()
         {
-            npcLumberjack.ComponentUpdated.Add(OnNpcLumberjackComponentUpdate);
-            targetNavigation.ComponentUpdated.Add(NavigationUpdated);
-            flammable.ComponentUpdated.Add(FlammableUpdated);
-            inventory.ComponentUpdated.Add(OnInventoryUpdated);
             ResetAllLocalState();
-            SetAnimationState(npcLumberjack.Data.currentState);
+            npcLumberjack.ComponentUpdated += OnNpcLumberjackComponentUpdate;
+            targetNavigation.ComponentUpdated += NavigationUpdated;
+            flammable.ComponentUpdated += FlammableUpdated;
+            inventory.ComponentUpdated += OnInventoryUpdated;
+            SetAnimationState(npcLumberjack.Data.CurrentState);
             SetForwardSpeed(TargetNavigationBehaviour.IsInTransit(targetNavigation));
         }
 
         private void OnDisable()
         {
-            npcLumberjack.ComponentUpdated.Remove(OnNpcLumberjackComponentUpdate);
-            targetNavigation.ComponentUpdated.Remove(NavigationUpdated);
-            inventory.ComponentUpdated.Remove(OnInventoryUpdated);
-            flammable.ComponentUpdated.Remove(FlammableUpdated);
         }
 
         public void OnAxeConnect()
@@ -60,15 +55,16 @@ namespace Assets.Gamelogic.NPC.Lumberjack
 
         private void OnInventoryUpdated(Inventory.Update update)
         {
-            if (update.resources.HasValue)
+            if (update.Resources.HasValue)
             {
-                cachedResourcesCount = update.resources.Value;
+                cachedResourcesCount = update.Resources.Value;
+                SetAnimationState(cachedFsmState);
             }
         }
 
         private void NavigationUpdated(TargetNavigation.Update navigationUpdate)
         {
-            if (navigationUpdate.navigationState.HasValue)
+            if (navigationUpdate.NavigationState.HasValue)
             {
                 SetForwardSpeed(TargetNavigationBehaviour.IsInTransit(targetNavigation));
             }
@@ -76,9 +72,9 @@ namespace Assets.Gamelogic.NPC.Lumberjack
 
         private void FlammableUpdated(Flammable.Update update)
         {
-            if (update.isOnFire.HasValue)
+            if (update.IsOnFire.HasValue)
             {
-                anim.SetBool("OnFire", update.isOnFire.Value);
+                anim.SetBool("OnFire", update.IsOnFire.Value);
             }
         }
 
@@ -96,11 +92,11 @@ namespace Assets.Gamelogic.NPC.Lumberjack
 
         private void OnNpcLumberjackComponentUpdate(NPCLumberjack.Update newState)
         {
-            if (newState.currentState.HasValue)
+            if (newState.CurrentState.HasValue)
             {
-                if (cachedFsmState != newState.currentState.Value)
+                if (cachedFsmState != newState.CurrentState.Value)
                 {
-                    cachedFsmState = newState.currentState.Value;
+                    cachedFsmState = newState.CurrentState.Value;
                     SetAnimationState(cachedFsmState);
                 }
             }
@@ -157,8 +153,8 @@ namespace Assets.Gamelogic.NPC.Lumberjack
             anim.SetBool("OnFire", false);
             Axe.SetActive(false);
             Log.SetActive(false);
-            cachedResourcesCount = 0;
-            cachedFsmState = LumberjackFSMState.StateEnum.IDLE;
+            cachedResourcesCount = inventory.Data.Resources;
+            cachedFsmState = npcLumberjack.Data.CurrentState;
         }
     }
 }

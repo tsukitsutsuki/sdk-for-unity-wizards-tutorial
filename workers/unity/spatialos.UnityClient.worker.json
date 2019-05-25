@@ -1,16 +1,29 @@
 {
   "build": {
-    "tasks_filename": "Improbable/build_script/spatialos.unity.client.build.json"
+    "tasks": [
+      {
+        "name": "Codegen",
+        "steps": [{"name": "** Run ci/codegen.sh instead **", "command": "echo", "arguments": ["No-op."]}]
+      },
+      {
+        "name": "build",
+        "steps": [{"name": "** Run ci/build-client.sh instead **", "command": "echo", "arguments": ["No-op."]}]
+      },
+      {
+        "name": "clean",
+        "steps": [{"name": "No-op", "command": "echo", "arguments": ["No-op."]}]
+      }
+    ]
   },
   "bridge": {
     "worker_attribute_set": {
       "attributes": [
-        "visual"
+        "UnityClient"
       ]
     },
     "entity_interest": {
       "range_entity_interest": {
-        "radius": 3
+        "radius": 100
       }
     },
     "streaming_query": [
@@ -22,7 +35,7 @@
     ],
     "component_delivery": {
       "default": "RELIABLE_ORDERED",
-      "checkout_all_initially": true
+      "checkoutAllInitially": true
     }
   },
   "external": {
@@ -31,8 +44,6 @@
       "windows": {
         "command": "build/worker/UnityClient@Windows/UnityClient@Windows.exe",
         "arguments": [
-          "+assemblyName",
-          "local_assembly",
           "+workerType",
           "UnityClient",
           "+infraServicesUrl",
@@ -40,12 +51,13 @@
           "+projectName",
           "${IMPROBABLE_PROJECT_NAME}",
           "-logfile",
-          "external-default-unityclient.log"
+          "../../logs/external-default-unityclient.log"
         ]
       },
       "macos": {
         "command": "open",
         "arguments": [
+          "-n",
           "./build/worker/UnityClient@Mac/UnityClient@Mac.app",
           "--args",
           "+assemblyName",
@@ -57,7 +69,7 @@
           "+projectName",
           "${IMPROBABLE_PROJECT_NAME}",
           "-logfile",
-          "external-default-unityclient.log"
+          "../../logs/external-default-unityclient.log"
         ]
       }
     }

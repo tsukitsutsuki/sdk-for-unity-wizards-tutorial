@@ -2,6 +2,7 @@ using Assets.Gamelogic.Core;
 using Assets.Gamelogic.Fire;
 using Assets.Gamelogic.FSM;
 using Assets.Gamelogic.Utils;
+using Improbable.Gdk.Core;
 using Improbable.Fire;
 using Improbable.Tree;
 using UnityEngine;
@@ -11,12 +12,12 @@ namespace Assets.Gamelogic.Tree
     public class TreeStumpState : FsmBaseState<TreeStateMachine, TreeFSMState>
     {
         private readonly TreeBehaviour parentBehaviour;
-        private readonly Flammable.Writer flammable;
+        private readonly Flammable.Requirable.Writer flammable;
         private readonly FlammableBehaviour flammableInterface;
 
         private Coroutine regrowingCoroutine;
 
-        public TreeStumpState(TreeStateMachine owner, TreeBehaviour inParentBehaviour, Flammable.Writer inFlammable) : base(owner)
+        public TreeStumpState(TreeStateMachine owner, TreeBehaviour inParentBehaviour, Flammable.Requirable.Writer inFlammable) : base(owner)
         {
             parentBehaviour = inParentBehaviour;
             flammable = inFlammable;
@@ -24,7 +25,7 @@ namespace Assets.Gamelogic.Tree
 
         public override void Enter()
         {
-            flammable.Send(new Flammable.Update().SetCanBeIgnited(false));
+            flammable.Send(new Flammable.Update() { CanBeIgnited = new Option<BlittableBool>(false) });
 
             if (regrowingCoroutine == null)
             {

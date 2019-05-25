@@ -1,12 +1,13 @@
 using Assets.Gamelogic.Core;
 using Assets.Gamelogic.Fire;
 using Assets.Gamelogic.NPC.LumberJack;
-using Improbable;
+using Improbable.Building;
 using Improbable.Core;
+using Improbable.Gdk.Core;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Npc;
 using Improbable.Team;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
+using Improbable.Tree;
 using UnityEngine;
 
 namespace Assets.Gamelogic.NPC.Lumberjack
@@ -14,10 +15,14 @@ namespace Assets.Gamelogic.NPC.Lumberjack
     [WorkerType(WorkerPlatform.UnityWorker)]
     public class LumberjackBehaviour : MonoBehaviour, IFlammable
     {
-        [Require] private NPCLumberjack.Writer npcLumberjack;
-        [Require] private TargetNavigation.Writer targetNavigation;
-        [Require] private Inventory.Writer inventory;
-        [Require] private TeamAssignment.Reader teamAssignment;
+        [Require] private NPCLumberjack.Requirable.Writer npcLumberjack;
+        [Require] private Harvestable.Requirable.CommandRequestSender harvestableRequestSender;
+        [Require] private Harvestable.Requirable.CommandResponseHandler harvestableResponseHandler;
+        [Require] private StockpileDepository.Requirable.CommandRequestSender stockpileDepositoryRequestSender;
+        [Require] private StockpileDepository.Requirable.CommandResponseHandler stockpileDepositoryResponseHandler;
+        [Require] private TargetNavigation.Requirable.Writer targetNavigation;
+        [Require] private Inventory.Requirable.Writer inventory;
+        [Require] private TeamAssignment.Requirable.Reader teamAssignment;
 
         [SerializeField] private TargetNavigationBehaviour navigation;
 
@@ -30,8 +35,8 @@ namespace Assets.Gamelogic.NPC.Lumberjack
 
         private void OnEnable()
         {
-            stateMachine = new LumberjackStateMachine(this, navigation, inventory, targetNavigation, npcLumberjack, teamAssignment);
-            stateMachine.OnEnable(npcLumberjack.Data.currentState);
+            stateMachine = new LumberjackStateMachine(this, navigation, inventory, targetNavigation, npcLumberjack, harvestableRequestSender, harvestableResponseHandler, stockpileDepositoryRequestSender, stockpileDepositoryResponseHandler, teamAssignment);
+            stateMachine.OnEnable(npcLumberjack.Data.CurrentState);
         }
 
         private void OnDisable()

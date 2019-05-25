@@ -1,49 +1,53 @@
 using Assets.Gamelogic.Utils;
 using Improbable;
 using Improbable.Core;
-using Improbable.Unity.Visualizer;
+using Improbable.Gdk.GameObjectRepresentation;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Core
 {
     public class DirectTransformVisualizer : MonoBehaviour
     {
-        [Require] private Position.Reader positionComponent;
-        [Require] private TransformComponent.Reader transformComponent;
+        [Require] private Position.Requirable.Reader positionComponent;
+        [Require] private TransformComponent.Requirable.Reader transformComponent;
+
+        private SpatialOSComponent spatialOSComponent;
+        private Vector3 origin;
 
         private void OnEnable()
         {
-            positionComponent.ComponentUpdated.Add(VisualizePosition);
-            transformComponent.ComponentUpdated.Add(VisualizeTransform);
-            SetPosition(positionComponent.Data.coords);
-            SetRotation(transformComponent.Data.rotation);
+            spatialOSComponent = GetComponent<SpatialOSComponent>();
+            origin = spatialOSComponent.Worker.Origin;
+
+            positionComponent.ComponentUpdated += VisualizePosition;
+            transformComponent.ComponentUpdated += VisualizeTransform;
+            SetPosition(positionComponent.Data.Coords);
+            SetRotation(transformComponent.Data.Rotation);
         }
 
         private void OnDisable()
         {
-            positionComponent.ComponentUpdated.Remove(VisualizePosition);
-            transformComponent.ComponentUpdated.Remove(VisualizeTransform);
         }
 
         private void VisualizePosition(Position.Update update)
         {
-            if(update.coords.HasValue)
+            if(update.Coords.HasValue)
             {
-                SetPosition(update.coords.Value);
+                SetPosition(update.Coords.Value);
             }
         }
 
         private void VisualizeTransform(TransformComponent.Update update)
         {
-            if (update.rotation.HasValue)
+            if (update.Rotation.HasValue)
             {
-                SetRotation(update.rotation.Value);
+                SetRotation(update.Rotation.Value);
             }
         }
 
         private void SetPosition(Coordinates position)
         {
-            transform.position = position.ToVector3();
+            transform.position = (position.ToVector3() + origin);
         }
 
         private void SetRotation(uint rotation)

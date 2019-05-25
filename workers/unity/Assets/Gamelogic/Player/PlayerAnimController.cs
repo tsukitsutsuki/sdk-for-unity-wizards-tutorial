@@ -4,16 +4,15 @@ using Assets.Gamelogic.Core;
 using Assets.Gamelogic.Utils;
 using Improbable.Abilities;
 using Improbable.Fire;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
+using Improbable.Gdk.GameObjectRepresentation;
 
 namespace Assets.Gamelogic.Player
 {
     [WorkerType(WorkerPlatform.UnityClient)]
     public class PlayerAnimController : MonoBehaviour
     {
-        [Require] private Spells.Reader spells;
-        [Require] private Flammable.Reader flammable;
+        [Require] private Spells.Requirable.Reader spells;
+        [Require] private Flammable.Requirable.Reader flammable;
 
         private Vector3 lastPosition;
 
@@ -29,20 +28,19 @@ namespace Assets.Gamelogic.Player
 
         private void OnEnable()
         {
-            flammable.ComponentUpdated.Add(FlammableUpdated);
+            flammable.ComponentUpdated += FlammableUpdated;
             lastPosition = transform.position;
         }
 
         private void OnDisable()
         {
-            flammable.ComponentUpdated.Remove(FlammableUpdated);
         }
 
         private void FlammableUpdated(Flammable.Update update)
         {
-            if (update.isOnFire.HasValue)
+            if (update.IsOnFire.HasValue)
             {
-                anim.SetBool("OnFire", update.isOnFire.Value);
+                anim.SetBool("OnFire", update.IsOnFire.Value);
             }
         }
 

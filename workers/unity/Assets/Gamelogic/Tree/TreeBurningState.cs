@@ -1,5 +1,6 @@
 using Assets.Gamelogic.FSM;
 using Improbable.Fire;
+using Improbable.Gdk.Core;
 using Improbable.Life;
 using Improbable.Tree;
 
@@ -7,38 +8,38 @@ namespace Assets.Gamelogic.Tree
 {
     public class TreeBurningState : FsmBaseState<TreeStateMachine, TreeFSMState>
     {
-        private readonly Flammable.Writer flammable;
-        private readonly Health.Writer health;
+        private readonly Flammable.Requirable.Writer flammable;
+        private readonly Health.Requirable.Writer health;
+        private bool isEnter = false;
 
-        public TreeBurningState(TreeStateMachine owner, Flammable.Writer inFlammable, Health.Writer inHealth) 
+        public TreeBurningState(TreeStateMachine owner, Flammable.Requirable.Writer inFlammable, Health.Requirable.Writer inHealth) 
             : base(owner)
         {
             flammable = inFlammable;
             health = inHealth;
+
+            flammable.ComponentUpdated += OnFlammableUpdated;
+            health.ComponentUpdated += OnHealthUpdated;
         }
 
         public override void Enter()
         {
-            flammable.Send(new Flammable.Update().SetCanBeIgnited(false));
-
-            flammable.ComponentUpdated.Add(OnFlammableUpdated);
-            health.ComponentUpdated.Add(OnHealthUpdated);
+            flammable.Send(new Flammable.Update() { CanBeIgnited = new Option<BlittableBool>(false) });
+            isEnter = true;
         }
 
         public override void Tick()
         {
-
         }
 
         public override void Exit(bool disabled)
         {
-            health.ComponentUpdated.Remove(OnHealthUpdated);
-            flammable.ComponentUpdated.Remove(OnFlammableUpdated);
+            isEnter = false;
         }
 
         private void OnHealthUpdated(Health.Update update)
         {
-            if (update.currentHealth.HasValue && update.currentHealth.Value <= 0)
+            if (isEnter && update.CurrentHealth.HasValue && update.CurrentHealth.Value <= 0)
             {
                 Owner.TriggerTransition(TreeFSMState.BURNT);
             }
@@ -46,7 +47,7 @@ namespace Assets.Gamelogic.Tree
 
         private void OnFlammableUpdated(Flammable.Update update)
         {
-            if (HasBeenExtinguished(update))
+            if (isEnter && HasBeenExtinguished(update))
             {
                 Owner.TriggerTransition(TreeFSMState.HEALTHY);
             }
@@ -54,7 +55,7 @@ namespace Assets.Gamelogic.Tree
 
         private bool HasBeenExtinguished(Flammable.Update flammableUpdate)
         {
-            return flammableUpdate.isOnFire.HasValue && !flammableUpdate.isOnFire.Value;
+            return flammableUpdate.IsOnFire.HasValue && !flammableUpdate.IsOnFire.Value;
         }
     }
 }

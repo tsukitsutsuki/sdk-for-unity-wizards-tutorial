@@ -8,11 +8,11 @@ namespace Assets.Gamelogic.NPC.Lumberjack
     public class LumberjackOnFireState : FsmBaseState<LumberjackStateMachine, LumberjackFSMState.StateEnum>
     {
         private readonly TargetNavigationBehaviour navigation;
-        private readonly TargetNavigation.Writer targetNavigation;
+        private readonly TargetNavigation.Requirable.Writer targetNavigation;
 
         public LumberjackOnFireState(LumberjackStateMachine owner,
                                      TargetNavigationBehaviour inNavigation,
-                                     TargetNavigation.Writer inTargetNavigation)
+                                     TargetNavigation.Requirable.Writer inTargetNavigation)
             : base(owner)
         {
             navigation = inNavigation;
@@ -21,7 +21,7 @@ namespace Assets.Gamelogic.NPC.Lumberjack
 
         public override void Enter()
         {
-            targetNavigation.ComponentUpdated.Add(OnTargetNavigationUpdated);
+            targetNavigation.OnNavigationFinished += OnTargetNavigationUpdated;
             NPCUtils.NavigateToRandomNearbyPosition(navigation, navigation.transform.position, SimulationSettings.NPCOnFireWaypointDistance, SimulationSettings.NPCDefaultInteractionSqrDistance);
         }
 
@@ -31,19 +31,15 @@ namespace Assets.Gamelogic.NPC.Lumberjack
 
         public override void Exit(bool disabled)
         {
-            targetNavigation.ComponentUpdated.Remove(OnTargetNavigationUpdated);
             if (!disabled)
             {
                 navigation.StopNavigation();
             }
         }
 
-        private void OnTargetNavigationUpdated(TargetNavigation.Update update)
+        private void OnTargetNavigationUpdated(NavigationFinished update)
         {
-            if (update.navigationFinished.Count > 0)
-            {
-                NPCUtils.NavigateToRandomNearbyPosition(navigation, navigation.transform.position, SimulationSettings.NPCOnFireWaypointDistance, SimulationSettings.NPCDefaultInteractionSqrDistance);
-            }
+            NPCUtils.NavigateToRandomNearbyPosition(navigation, navigation.transform.position, SimulationSettings.NPCOnFireWaypointDistance, SimulationSettings.NPCDefaultInteractionSqrDistance);
         }
     }
 }

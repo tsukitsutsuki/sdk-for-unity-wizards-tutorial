@@ -42,7 +42,7 @@ namespace Assets.Gamelogic.Utils
 
         public static bool CompareEqualityEpsilon(Coordinates a, Coordinates b)
         {
-            return Coordinates.SquareDistance(a, b) < Mathf.Epsilon;
+            return Vector3.Distance(a.ToVector3(), b.ToVector3()) < Mathf.Epsilon;
         }
 
         public static float SqrDistance(Vector3 a, Vector3 b)

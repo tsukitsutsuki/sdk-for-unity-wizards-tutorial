@@ -1,8 +1,7 @@
 using Assets.Gamelogic.Core;
 using Assets.Gamelogic.Utils;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Player;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Player
@@ -10,7 +9,7 @@ namespace Assets.Gamelogic.Player
     [WorkerType(WorkerPlatform.UnityClient)]
     public class PlayerControlsSender : MonoBehaviour
     {
-        [Require] private PlayerControls.Writer playerControls;
+        [Require] private PlayerControls.Requirable.Writer playerControls;
 
         private Vector3 movementDirection = Vector3.zero;
 
@@ -39,13 +38,13 @@ namespace Assets.Gamelogic.Player
             var targetPosition = playerRigidbody.position;
             if (ShouldUpdatePlayerControls(targetPosition))
             {
-                playerControls.Send(new PlayerControls.Update().SetTargetPosition(targetPosition.ToCoordinates()));
+                playerControls.Send(new PlayerControls.Update() { TargetPosition = targetPosition.ToCoordinates() });
             }
         }
 
         private bool ShouldUpdatePlayerControls(Vector3 newPosition)
         {
-            return !MathUtils.CompareEqualityEpsilon(newPosition, playerControls.Data.targetPosition.ToVector3());
+            return !MathUtils.CompareEqualityEpsilon(newPosition, playerControls.Data.TargetPosition.ToVector3());
         }
     }
 }

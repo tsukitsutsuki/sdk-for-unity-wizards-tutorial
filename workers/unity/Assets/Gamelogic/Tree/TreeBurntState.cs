@@ -1,4 +1,3 @@
-using System.Collections;
 using Assets.Gamelogic.Core;
 using Assets.Gamelogic.Fire;
 using Assets.Gamelogic.FSM;
@@ -12,21 +11,21 @@ namespace Assets.Gamelogic.Tree
     public class TreeBurntState : FsmBaseState<TreeStateMachine, TreeFSMState>
     {
         private readonly TreeBehaviour parentBehaviour;
-        private readonly Flammable.Writer flammable;
+        private readonly Flammable.Requirable.CommandRequestSender flammableRequestSender;
         private readonly FlammableBehaviour flammableInterface;
 
         private Coroutine regrowingCoroutine;
 
-        public TreeBurntState(TreeStateMachine owner, TreeBehaviour inParentBehaviour, Flammable.Writer inFlammable, FlammableBehaviour inFlammableInterface) : base(owner)
+        public TreeBurntState(TreeStateMachine owner, TreeBehaviour inParentBehaviour, Flammable.Requirable.CommandRequestSender inFlammableRequestSender, FlammableBehaviour inFlammableInterface) : base(owner)
         {
             parentBehaviour = inParentBehaviour;
-            flammable = inFlammable;
+            flammableRequestSender = inFlammableRequestSender;
             flammableInterface = inFlammableInterface;
         }
 
         public override void Enter()
         {
-            flammableInterface.SelfExtinguish(flammable, false);
+            flammableInterface.SelfExtinguish(flammableRequestSender, false);
             if (regrowingCoroutine == null)
             {
                 regrowingCoroutine = parentBehaviour.StartCoroutine(TimerUtils.WaitAndPerform(SimulationSettings.BurntTreeRegrowthTimeSecs, Regrow));

@@ -1,9 +1,9 @@
 ﻿using Assets.Gamelogic.Core;
 using Improbable.Core;
+using Improbable.Gdk.Core.Commands;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Life;
-using Improbable.Unity;
-using Improbable.Unity.Core;
-using Improbable.Unity.Visualizer;
+using Improbable.Worker.CInterop;
 using UnityEngine;
 
 namespace Assets.Gamelogic.NPC
@@ -11,35 +11,45 @@ namespace Assets.Gamelogic.NPC
     [WorkerType(WorkerPlatform.UnityWorker)]
     public class NPCDeathBehaviour : MonoBehaviour
     {
-        [Require] private UnityWorkerAuthorityCheck.Writer unityWorkerAuthorityCheck;
-        [Require] private Health.Reader health;
+        [Require] private UnityWorkerAuthorityCheck.Requirable.Writer unityWorkerAuthorityCheck;
+        [Require] private Health.Requirable.Reader health;
+        [Require] private WorldCommands.Requirable.WorldCommandRequestSender worldCommandRequestSender;
+        [Require] private WorldCommands.Requirable.WorldCommandResponseHandler worldCommandResponseHandler;
 
         private bool npcDeathActive;
 
         private void OnEnable()
         {
             npcDeathActive = SimulationSettings.NPCDeathActive;
-            health.ComponentUpdated.Add(OnHealthUpdated);
+            health.ComponentUpdated += OnHealthUpdated;
+            worldCommandResponseHandler.OnDeleteEntityResponse += OnDeleteEntityResponse;
         }
 
         private void OnDisable()
         {
-            health.ComponentUpdated.Remove(OnHealthUpdated);
         }
 
         private void OnHealthUpdated(Health.Update update)
         {
-            if (update.currentHealth.HasValue)
+            if (update.CurrentHealth.HasValue)
             {
                 DieUponHealthDepletion(update);
             }
         }
 
+        private void OnDeleteEntityResponse(WorldCommands.DeleteEntity.ReceivedResponse response)
+        {
+            if (response.StatusCode != StatusCode.Success)
+            {
+                Debug.LogErrorFormat("Failed to Delete Player Entity (#{0}) on quit: {1}", response.RequestPayload.EntityId, response.Message);
+            }
+        }
+
         private void DieUponHealthDepletion(Health.Update update)
         {
-            if (npcDeathActive && update.currentHealth.Value <= 0)
+            if (npcDeathActive && update.CurrentHealth.Value <= 0)
             {
-                SpatialOS.Commands.DeleteEntity(unityWorkerAuthorityCheck, gameObject.EntityId());
+                worldCommandRequestSender.DeleteEntity(gameObject.GetComponent<SpatialOSComponent>().SpatialEntityId);
             }
         }
     }

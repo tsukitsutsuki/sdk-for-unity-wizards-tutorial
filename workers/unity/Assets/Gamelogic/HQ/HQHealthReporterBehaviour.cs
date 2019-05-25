@@ -1,8 +1,7 @@
 using Assets.Gamelogic.UI;
+using Improbable.Gdk.GameObjectRepresentation;
 using Improbable.Life;
 using Improbable.Team;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
 using UnityEngine;
 
 namespace Assets.Gamelogic.HQ
@@ -10,25 +9,24 @@ namespace Assets.Gamelogic.HQ
     [WorkerType(WorkerPlatform.UnityClient)]
     public class HQHealthReporterBehaviour : MonoBehaviour
     {
-        [Require] private Health.Reader health;
-        [Require] private TeamAssignment.Reader teamAssignment;
+        [Require] private Health.Requirable.Reader health;
+        [Require] private TeamAssignment.Requirable.Reader teamAssignment;
 
         private void OnEnable()
         {
-            health.ComponentUpdated.Add(OnHealthUpdated);
-            UpdateHQHealthBar(teamAssignment.Data.teamId, health.Data.currentHealth);
+            health.ComponentUpdated += OnHealthUpdated;
+            UpdateHQHealthBar(teamAssignment.Data.TeamId, health.Data.CurrentHealth);
         }
 
         private void OnDisable()
         {
-            health.ComponentUpdated.Remove(OnHealthUpdated);
         }
 
         private void OnHealthUpdated(Health.Update update)
         {
-            if (update.currentHealth.HasValue)
+            if (update.CurrentHealth.HasValue)
             {
-                UpdateHQHealthBar(teamAssignment.Data.teamId, update.currentHealth.Value);
+                UpdateHQHealthBar(teamAssignment.Data.TeamId, update.CurrentHealth.Value);
             }
         }
 

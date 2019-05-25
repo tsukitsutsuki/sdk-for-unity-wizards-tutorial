@@ -1,8 +1,7 @@
 ﻿using Assets.Gamelogic.Core;
 using Improbable;
 using Improbable.Abilities;
-using Improbable.Unity;
-using Improbable.Unity.Visualizer;
+using Improbable.Gdk.GameObjectRepresentation;
 using UnityEngine;
 
 namespace Assets.Gamelogic.Abilities
@@ -10,7 +9,7 @@ namespace Assets.Gamelogic.Abilities
     [WorkerType(WorkerPlatform.UnityClient)]
     public class SpellcastAudioTriggers : MonoBehaviour
     {
-        [Require] private Spells.Reader spells;
+        [Require] private Spells.Requirable.Reader spells;
 
         [SerializeField] private AudioSource audioSource;
         [SerializeField] private AudioClip SpellChannelAudio;
@@ -24,21 +23,16 @@ namespace Assets.Gamelogic.Abilities
 
         private void OnEnable ()
         {
-            spells.ComponentUpdated.Add(OnSpellCast);
+            spells.OnSpellAnimationEvent += OnSpellCast;
         }
 
         private void OnDisable()
         {
-            spells.ComponentUpdated.Remove(OnSpellCast);
         }
 
-        private void OnSpellCast(Spells.Update spellCastUpdate)
+        private void OnSpellCast(SpellAnimationEvent spellCast)
         {
-            for (var eventNum = 0; eventNum < spellCastUpdate.spellAnimationEvent.Count; eventNum++)
-            {
-                var spellCast = spellCastUpdate.spellAnimationEvent[eventNum];
-                TriggerSpellcastAudio(spellCast.spellType, spellCast.position);
-            }
+            TriggerSpellcastAudio(spellCast.SpellType, spellCast.Position);
         }
 
         public void TriggerSpellChannelAudio()
