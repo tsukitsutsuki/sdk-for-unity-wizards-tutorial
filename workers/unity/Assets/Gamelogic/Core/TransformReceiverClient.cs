@@ -16,8 +16,7 @@ namespace Assets.Gamelogic.Core
         private bool isRemote;
 
         [SerializeField] private Rigidbody myRigidbody;
-
-        private bool? isAuthoritativePlayer;
+        [SerializeField] private Player.PlayerAuthority auth;
 
         private void Awake()
         {
@@ -54,11 +53,7 @@ namespace Assets.Gamelogic.Core
 
         private bool IsNotAnAuthoritativePlayer()
         {
-            if (!isAuthoritativePlayer.HasValue)
-            {
-                isAuthoritativePlayer = Player.PlayerAuthority.IsAuth(gameObject);
-            }
-            return !isAuthoritativePlayer.Value;
+            return (auth == null || !auth.IsAuth());
         }
 
         private void Update()

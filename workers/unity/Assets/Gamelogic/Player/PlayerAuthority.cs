@@ -17,10 +17,9 @@ namespace Assets.Gamelogic.Player
         {
         }
 
-        public static bool IsAuth(GameObject player)
+        public bool IsAuth()
         {
-            var auth = player.GetComponent<PlayerAuthority>();
-            return (auth != null && auth.isActiveAndEnabled);
+            return (authority != null);
         }
     }
 }

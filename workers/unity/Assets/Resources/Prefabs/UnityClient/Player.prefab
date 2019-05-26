@@ -431,6 +431,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   myRigidbody: {fileID: 54000011786116546}
+  auth: {fileID: 884235493073557190}
 --- !u!114 &114000013741942322
 MonoBehaviour:
   m_ObjectHideFlags: 0
