@@ -55,3 +55,27 @@ Check out the pre-alpha release of our new Unity GDK: [source code on GitHub](ht
 
 ---
 *Copyright (C) 2018 Improbable Worlds Limited. All rights reserved.*
+---
+### about branch:wizards-gdk
+I gave it a try migrate to GDK.
+GDK : 0.1.4
+Unity : 2018.3.2f1
+
+#### setup
+* Clone the repo: `git clone -b wizards-gdk https://github.com/tsukitsutsuki/sdk-for-unity-wizards-tutorial.git`
+* Move into the directory: `cd sdk-for-unity-wizards-tutorial`
+* Clone GDK. If you are using Windows run: `powershell scripts/powershell/setup.ps1`
+
+#### local development
+* Open Unity Project: workers/unity
+* Build workers : Unity Editor Menu - SpatialOS - Build for local - All workers
+* Local launch server : Unity Editor Menu - SpatialOS - Local launch
+* Open Dev Scene : Assets/Dev.unity
+* Play Dev Scene
+
+#### cloud upload
+* Open Unity Project: workers/unity
+* Build workers : Unity Editor Menu - SpatialOS - Build for cloud - All workers
+* Update spatialos.json: edit the "name" parameter from `your_project_name_here` to your spatialOS project name and save it
+* Upload the assembly: run `spatial cloud upload my_wizards_assembly`
+* Launch the deployment: run `spatial cloud launch --snapshot=snapshots/default.snapshot my_wizards_assembly cloud_launch.json my_wizards`
